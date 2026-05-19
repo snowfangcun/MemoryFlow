@@ -63,7 +63,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-canvas">
+    <div className="min-h-screen bg-canvas overflow-x-hidden">
       {!isReviewActive && (
         <Header activeTab={activeTab} onTabChange={(tab) => handleTabChange(tab as Tab)} dueCount={dueCount} />
       )}
