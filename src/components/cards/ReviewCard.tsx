@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Eye, RotateCcw, Zap } from 'lucide-react';
 import Button from '../ui/Button';
+import { ConfirmModal } from '../ui/Modal';
 import type { Card, Rating } from '../../types';
 
 interface ReviewCardProps {
@@ -13,6 +14,7 @@ interface ReviewCardProps {
 
 const ReviewCard: React.FC<ReviewCardProps> = ({ card, onRate, onExit, currentIndex, total }) => {
   const [showAnswer, setShowAnswer] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
   // 使用 ref 存储最新的 onRate，避免 useEffect 反复绑定/解绑事件
   const onRateRef = useRef(onRate);
   onRateRef.current = onRate;
@@ -55,8 +57,20 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ card, onRate, onExit, currentIn
 
   return (
     <div className="min-h-screen bg-canvas flex flex-col">
+      {/* 退出确认弹窗 */}
+      <ConfirmModal
+        isOpen={showExitConfirm}
+        onClose={() => setShowExitConfirm(false)}
+        onConfirm={() => { setShowExitConfirm(false); onExit(); }}
+        title="退出复习"
+        message={`已复习 ${currentIndex} 张卡片，进度将保留。确定退出吗？`}
+        confirmText="退出"
+        cancelText="继续复习"
+        variant="warning"
+      />
+
       <div className="flex items-center justify-between px-5 py-3 border-b border-hairline">
-        <button onClick={onExit} className="text-sm text-muted hover:text-ink transition-colors">退出复习</button>
+        <button onClick={() => setShowExitConfirm(true)} className="text-sm text-muted hover:text-ink transition-colors">退出复习</button>
         <span className="text-xs text-muted font-mono tabular-nums">{currentIndex + 1}/{total}</span>
       </div>
 

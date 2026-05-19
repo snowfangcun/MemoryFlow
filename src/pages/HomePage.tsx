@@ -1,52 +1,93 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { Play, Plus, Flame, BookOpen, Target, Clock, ArrowRight } from 'lucide-react';
 import ProgressRing from '../components/ui/ProgressRing';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import { Input, Textarea } from '../components/ui/Input';
-import { ReviewCard } from '../components/cards';
+import ReviewCard from '../components/cards/ReviewCard';
+import ReviewCompletion from '../components/ui/ReviewCompletion';
 import { useStore } from '../stores/useStore';
+import { useToastStore } from '../stores/useToastStore';
 import type { Rating } from '../types';
 
 const HomePage: React.FC = () => {
   const { notebooks, cards, getDueCards, getTodayStats, getStreak, reviewCard, addNotebook, settings } = useStore();
+  const addToast = useToastStore(s => s.addToast);
   const [isReviewing, setIsReviewing] = useState(false);
+  const [showCompletion, setShowCompletion] = useState(false);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [showNewNotebookModal, setShowNewNotebookModal] = useState(false);
-
-  // React 受控表单
   const [newNbName, setNewNbName] = useState('');
   const [newNbDesc, setNewNbDesc] = useState('');
+
+  // 收集本次复习的评级用于完成页
+  const ratingsRef = useRef<Rating[]>([]);
+  const [reviewRatings, setReviewRatings] = useState<Rating[]>([]);
 
   const dueCards = getDueCards();
   const todayStats = getTodayStats();
   const streak = getStreak();
 
-  // 进度语义：已复习数 / 当日总数（待复习 + 已复习）
   const totalToday = todayStats.reviewedToday + dueCards.length;
   const progress = totalToday > 0 ? (todayStats.reviewedToday / totalToday) * 100 : 0;
 
   const handleRate = useCallback((rating: Rating) => {
     if (dueCards[currentCardIndex]) {
       reviewCard(dueCards[currentCardIndex].id, rating);
-      if (currentCardIndex < dueCards.length - 1) setCurrentCardIndex(p => p + 1);
-      else { setIsReviewing(false); setCurrentCardIndex(0); }
+      ratingsRef.current = [...ratingsRef.current, rating];
+      if (currentCardIndex < dueCards.length - 1) {
+        setCurrentCardIndex(p => p + 1);
+      } else {
+        // 全部完成 → 显示祝贺页
+        setReviewRatings(ratingsRef.current);
+        ratingsRef.current = [];
+        setIsReviewing(false);
+        setShowCompletion(true);
+        setCurrentCardIndex(0);
+      }
     }
   }, [dueCards, currentCardIndex, reviewCard]);
 
   const handleCreateNotebook = () => {
     if (newNbName.trim()) {
       addNotebook(newNbName.trim(), newNbDesc.trim() || undefined);
+      addToast('学习本已创建', 'success');
       setNewNbName('');
       setNewNbDesc('');
       setShowNewNotebookModal(false);
     }
   };
 
+  // 完成页 → 首页
+  if (showCompletion) {
+    return (
+      <ReviewCompletion
+        reviewedCount={reviewRatings.length}
+        ratings={reviewRatings}
+        onFinish={() => setShowCompletion(false)}
+      />
+    );
+  }
+
+  // 复习模式
   if (isReviewing && dueCards.length > 0) {
-    return <ReviewCard card={dueCards[currentCardIndex]} onRate={handleRate}
-      onExit={() => { setIsReviewing(false); setCurrentCardIndex(0); }}
-      currentIndex={currentCardIndex} total={dueCards.length} />;
+    return (
+      <ReviewCard
+        card={dueCards[currentCardIndex]}
+        onRate={handleRate}
+        onExit={() => {
+          // 退出复习：保存已复习的进度
+          if (ratingsRef.current.length > 0) {
+            addToast(`已复习 ${ratingsRef.current.length} 张，进度已保存`, 'info');
+            ratingsRef.current = [];
+          }
+          setIsReviewing(false);
+          setCurrentCardIndex(0);
+        }}
+        currentIndex={currentCardIndex}
+        total={dueCards.length}
+      />
+    );
   }
 
   const dueNotebooks = notebooks.map(n => ({

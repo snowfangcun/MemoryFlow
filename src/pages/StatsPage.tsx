@@ -29,10 +29,10 @@ const StatsPage: React.FC = () => {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         {[
-          { icon: Flame, value: stats.streak, label: '连续打卡', unit: '天', bg: '#f5f0e8' },
-          { icon: Trophy, value: settings.totalStudyDays, label: '累计学习', unit: '天', bg: '#f5f0e8' },
-          { icon: Target, value: stats.masteredCards, label: '已掌握', unit: '张', bg: '#f5f0e8' },
-          { icon: TrendingUp, value: stats.reviewsThisWeek, label: '本周复习', unit: '次', bg: '#f5f0e8' },
+          { icon: Flame, value: stats.streak, label: '连续打卡', unit: '天' },
+          { icon: Trophy, value: settings.totalStudyDays, label: '累计学习', unit: '天' },
+          { icon: Target, value: stats.masteredCards, label: '已掌握', unit: '张' },
+          { icon: TrendingUp, value: stats.reviewsThisWeek, label: '本周复习', unit: '次' },
         ].map((s, i) => (
           <div key={s.label} className={`bg-surface-card rounded-lg p-5 ${i > 0 ? `enter enter-d${i + 1}` : ''}`}>
             <div className="w-10 h-10 rounded-lg bg-canvas flex items-center justify-center mb-3">
@@ -44,24 +44,22 @@ const StatsPage: React.FC = () => {
         ))}
       </div>
 
-      {/* Heatmap */}
       <section className="bg-surface-card rounded-xl p-5 mb-6">
         <h3 className="text-sm font-semibold text-ink mb-4">学习热力图</h3>
         <HeatmapCalendar data={stats.heatmap} daysToShow={84} />
       </section>
 
-      {/* Rating Distribution */}
       <section className="bg-surface-card rounded-xl p-5 mb-6">
         <h3 className="text-sm font-semibold text-ink mb-4">记忆评级分布</h3>
         <div className="grid grid-cols-3 gap-4">
           {[
-            { label: '生疏', count: stats.ratingDist.forgot, bg: '#f5f0e8', cls: 'text-muted' },
-            { label: '一般', count: stats.ratingDist.hard, bg: '#f5f0e8', cls: 'text-muted' },
-            { label: '简单', count: stats.ratingDist.good, bg: '#f5f0e8', cls: 'text-muted' },
+            { label: '生疏', count: stats.ratingDist.forgot },
+            { label: '一般', count: stats.ratingDist.hard },
+            { label: '简单', count: stats.ratingDist.good },
           ].map(r => (
             <div key={r.label} className="text-center">
-              <div className={`w-14 h-14 mx-auto mb-2 rounded-lg`} style={{ backgroundColor: r.bg }}>
-                <span className={`text-lg font-medium heading-serif flex items-center justify-center h-full ${r.cls}`}>{r.count}</span>
+              <div className="w-14 h-14 mx-auto mb-2 rounded-lg bg-surface-soft flex items-center justify-center">
+                <span className="text-lg font-medium heading-serif text-ink">{r.count}</span>
               </div>
               <p className="text-xs text-muted">{r.label}</p>
             </div>
@@ -69,7 +67,6 @@ const StatsPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Notebook Progress */}
       <section className="bg-surface-card rounded-xl p-5">
         <h3 className="text-sm font-semibold text-ink mb-4">学习本详情</h3>
         {stats.notebookStats.length === 0 ? (

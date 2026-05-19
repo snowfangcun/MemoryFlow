@@ -7,6 +7,7 @@ import NotebookCard from '../components/cards/NotebookCard';
 import CardPreview from '../components/cards/CardPreview';
 import EmptyState from '../components/ui/EmptyState';
 import { useStore } from '../stores/useStore';
+import { useToastStore } from '../stores/useToastStore';
 import type { Notebook, Card } from '../types';
 import { MASTERED_INTERVAL_MS } from '../types';
 
@@ -14,6 +15,7 @@ type SortOption = 'created' | 'reviews' | 'name';
 
 const NotebooksPage: React.FC = () => {
   const { notebooks, cards, addNotebook, updateNotebook, deleteNotebook, addCard, updateCard, deleteCard } = useStore();
+  const addToast = useToastStore(s => s.addToast);
   const [selectedNotebook, setSelectedNotebook] = useState<Notebook | null>(null);
   const [showNotebookModal, setShowNotebookModal] = useState(false);
   const [showEditNotebookModal, setShowEditNotebookModal] = useState(false);
@@ -21,15 +23,12 @@ const NotebooksPage: React.FC = () => {
   const [editingCard, setEditingCard] = useState<Card | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'notebook' | 'card'; id: string } | null>(null);
   const [cardType, setCardType] = useState<'question' | 'cloze'>('question');
-
-  // Form state (React 受控模式)
   const [formFront, setFormFront] = useState('');
   const [formBack, setFormBack] = useState('');
   const [notebookName, setNotebookName] = useState('');
   const [notebookDesc, setNotebookDesc] = useState('');
   const [editNotebookName, setEditNotebookName] = useState('');
   const [editNotebookDesc, setEditNotebookDesc] = useState('');
-
   const [sortBy, setSortBy] = useState<SortOption>('created');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -50,8 +49,8 @@ const NotebooksPage: React.FC = () => {
   const handleCreateNotebook = () => {
     if (notebookName.trim()) {
       addNotebook(notebookName.trim(), notebookDesc.trim() || undefined);
-      setNotebookName('');
-      setNotebookDesc('');
+      addToast('学习本已创建', 'success');
+      setNotebookName(''); setNotebookDesc('');
       setShowNotebookModal(false);
     }
   };
@@ -59,6 +58,7 @@ const NotebooksPage: React.FC = () => {
   const handleEditNotebook = () => {
     if (selectedNotebook && editNotebookName.trim()) {
       updateNotebook(selectedNotebook.id, { name: editNotebookName.trim(), description: editNotebookDesc.trim() || undefined });
+      addToast('学习本已更新', 'success');
       setShowEditNotebookModal(false);
     }
   };
@@ -74,26 +74,35 @@ const NotebooksPage: React.FC = () => {
   const handleCreateCard = () => {
     if (formFront.trim() && selectedNotebook) {
       if (cardType === 'cloze') {
-        // 填空卡：从 {{答案}} 中自动提取 back
         const answers = Array.from(formFront.matchAll(/\{\{([^}]+)\}\}/g), m => m[1]);
         const back = answers.join(' | ');
-        if (editingCard) updateCard(editingCard.id, { front: formFront.trim(), back });
-        else addCard(selectedNotebook.id, cardType, formFront.trim(), back);
+        if (editingCard) {
+          updateCard(editingCard.id, { front: formFront.trim(), back });
+          addToast('卡片已更新', 'success');
+        } else {
+          addCard(selectedNotebook.id, cardType, formFront.trim(), back);
+          addToast('卡片已创建', 'success');
+        }
       } else {
-        if (editingCard) updateCard(editingCard.id, { front: formFront.trim(), back: formBack.trim() });
-        else addCard(selectedNotebook.id, cardType, formFront.trim(), formBack.trim());
+        if (editingCard) {
+          updateCard(editingCard.id, { front: formFront.trim(), back: formBack.trim() });
+          addToast('卡片已更新', 'success');
+        } else {
+          addCard(selectedNotebook.id, cardType, formFront.trim(), formBack.trim());
+          addToast('卡片已创建', 'success');
+        }
       }
-      setFormFront('');
-      setFormBack('');
-      setShowCardModal(false);
-      setEditingCard(null);
+      setFormFront(''); setFormBack('');
+      setShowCardModal(false); setEditingCard(null);
     }
   };
 
   const handleDelete = () => {
     if (deleteConfirm) {
-      deleteConfirm.type === 'notebook' ? deleteNotebook(deleteConfirm.id) : deleteCard(deleteConfirm.id);
-      if (deleteConfirm.type === 'notebook') setSelectedNotebook(null);
+      const isNotebook = deleteConfirm.type === 'notebook';
+      isNotebook ? deleteNotebook(deleteConfirm.id) : deleteCard(deleteConfirm.id);
+      addToast(isNotebook ? '学习本已删除' : '卡片已删除', 'info');
+      if (isNotebook) setSelectedNotebook(null);
       setDeleteConfirm(null);
     }
   };
@@ -125,14 +134,11 @@ const NotebooksPage: React.FC = () => {
           </div>
         )}
 
-        {/* 新建学习本 Modal */}
         <Modal isOpen={showNotebookModal} onClose={() => setShowNotebookModal(false)} title="新建学习本"
           footer={<><Button variant="ghost" onClick={() => setShowNotebookModal(false)}>取消</Button><Button onClick={handleCreateNotebook}>创建</Button></>}>
           <div className="space-y-3.5">
-            <Input label="名称" placeholder="例如：英语单词" value={notebookName}
-              onChange={e => setNotebookName(e.target.value)} />
-            <Textarea label="描述（可选）" placeholder="简短描述..." rows={2} value={notebookDesc}
-              onChange={e => setNotebookDesc(e.target.value)} />
+            <Input label="名称" placeholder="例如：英语单词" value={notebookName} onChange={e => setNotebookName(e.target.value)} />
+            <Textarea label="描述（可选）" placeholder="简短描述..." rows={2} value={notebookDesc} onChange={e => setNotebookDesc(e.target.value)} />
           </div>
         </Modal>
 
@@ -145,16 +151,14 @@ const NotebooksPage: React.FC = () => {
   return (
     <div className="max-w-5xl mx-auto px-5 py-10">
       <div className="flex items-center gap-3 mb-7">
-        <button onClick={() => setSelectedNotebook(null)}
-          className="p-1.5 rounded-lg hover:bg-surface-soft transition-colors">
+        <button onClick={() => setSelectedNotebook(null)} className="p-1.5 rounded-lg hover:bg-surface-soft transition-colors">
           <ArrowLeft size={18} className="text-muted" />
         </button>
         <div className="flex-1">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-md" style={{ background: selectedNotebook.color }} />
             <h2 className="heading-serif text-lg text-ink">{selectedNotebook.name}</h2>
-            <button onClick={openEditNotebookModal}
-              className="text-xs text-muted hover:text-ink ml-1 transition-colors">编辑</button>
+            <button onClick={openEditNotebookModal} className="text-xs text-muted hover:text-ink ml-1 transition-colors">编辑</button>
           </div>
           {selectedNotebook.description && <p className="text-xs text-muted mt-0.5">{selectedNotebook.description}</p>}
         </div>
@@ -163,14 +167,11 @@ const NotebooksPage: React.FC = () => {
         </Button>
       </div>
 
-      {/* 编辑学习本 Modal */}
       <Modal isOpen={showEditNotebookModal} onClose={() => setShowEditNotebookModal(false)} title="编辑学习本"
         footer={<><Button variant="ghost" onClick={() => setShowEditNotebookModal(false)}>取消</Button><Button onClick={handleEditNotebook}>保存</Button></>}>
         <div className="space-y-3.5">
-          <Input label="名称" placeholder="例如：英语单词" value={editNotebookName}
-            onChange={e => setEditNotebookName(e.target.value)} />
-          <Textarea label="描述" placeholder="简短描述..." rows={2} value={editNotebookDesc}
-            onChange={e => setEditNotebookDesc(e.target.value)} />
+          <Input label="名称" placeholder="例如：英语单词" value={editNotebookName} onChange={e => setEditNotebookName(e.target.value)} />
+          <Textarea label="描述" placeholder="简短描述..." rows={2} value={editNotebookDesc} onChange={e => setEditNotebookDesc(e.target.value)} />
         </div>
       </Modal>
 

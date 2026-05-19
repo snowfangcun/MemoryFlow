@@ -28,6 +28,10 @@ interface AppStore {
 
   updateSettings: (updates: Partial<Settings>) => void;
   initializeSettings: () => void;
+
+  // 导入/导出
+  exportData: () => string;
+  importData: (json: string) => string | null;
 }
 
 const defaultSettings: Settings = {
@@ -269,6 +273,25 @@ export const useStore = create<AppStore>()(
           heatmap.set(date, (heatmap.get(date) || 0) + 1);
         });
         return heatmap;
+      },
+
+      // 导出/导入
+      exportData: () => {
+        const { notebooks, cards, reviewLogs, settings } = get();
+        return JSON.stringify({ notebooks, cards, reviewLogs, settings, version: 1 }, null, 2);
+      },
+
+      importData: (json: string): string | null => {
+        try {
+          const data = JSON.parse(json);
+          if (!data.notebooks || !data.cards || !data.reviewLogs || !data.settings) {
+            return '数据格式不正确，缺少必要字段';
+          }
+          set({ notebooks: data.notebooks, cards: data.cards, reviewLogs: data.reviewLogs, settings: data.settings });
+          return null;
+        } catch {
+          return 'JSON 格式解析失败，请检查文件内容';
+        }
       },
     }),
     { name: STORAGE_KEY }
