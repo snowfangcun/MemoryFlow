@@ -1,5 +1,6 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { GitBranch, HelpCircle, PenLine, ExternalLink, Link as LinkIcon, RotateCcw, Clock, X, Search, Filter } from 'lucide-react';
 import ForceGraph from '../components/ui/ForceGraph';
 import { useStore } from '../stores/useStore';
@@ -25,6 +26,26 @@ const KnowledgeGraphPage: React.FC = () => {
   const handleCardClick = useCallback((card: Card | null) => {
     setSelectedCard(card);
   }, []);
+
+  const drawerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedCard(null);
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, []);
+
+  useEffect(() => {
+    if (selectedCard) {
+      document.body.style.overflow = 'hidden';
+      drawerRef.current?.focus();
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [selectedCard]);
 
   const stripWikilinks = (text: string) => text.replace(/\[\[([^\]]+)\]\]/g, '$1');
 
@@ -192,27 +213,67 @@ const KnowledgeGraphPage: React.FC = () => {
           </div>
 
           {/* 详情面板（桌面） */}
-          {selectedCard && (
-            <div className="hidden md:block w-80 shrink-0 overflow-y-auto">
-              <div className="bg-surface-card rounded-xl p-4 border border-hairline">
-                {renderCardDetail(selectedCard)}
-              </div>
-            </div>
-          )}
+          <AnimatePresence>
+            {selectedCard && (
+              <motion.div
+                key="desktop-panel"
+                className="hidden md:block w-80 shrink-0 overflow-y-auto"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="bg-surface-card rounded-xl p-4 border border-hairline relative">
+                  <button onClick={() => setSelectedCard(null)} className="absolute top-3 right-3 p-1 rounded-lg hover:bg-surface-soft transition-colors z-10">
+                    <X size={16} className="text-muted" />
+                  </button>
+                  {renderCardDetail(selectedCard)}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
       {/* 详情面板（移动端 - Portal） */}
-      {selectedCard && createPortal(
-        <>
-          <div className="md:hidden fixed inset-0 z-[70] bg-black/20" onClick={() => setSelectedCard(null)} />
-          <div className="md:hidden fixed inset-x-0 bottom-0 z-[70] bg-surface-card rounded-t-2xl border-t border-hairline shadow-xl max-h-[70vh] overflow-y-auto">
-            <div className="p-4">
-              <div className="w-8 h-1 rounded-full bg-hairline mx-auto mb-3" />
-              {renderCardDetail(selectedCard)}
-            </div>
-          </div>
-        </>,
+      {createPortal(
+        <AnimatePresence>
+          {selectedCard && (
+            <>
+              <motion.div
+                key="mobile-backdrop"
+                className="md:hidden fixed inset-0 z-[70] bg-black/20"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                onClick={() => setSelectedCard(null)}
+              />
+              <motion.div
+                key="mobile-drawer"
+                ref={drawerRef}
+                tabIndex={-1}
+                className="md:hidden fixed inset-x-0 bottom-0 z-[70] bg-surface-card rounded-t-2xl border-t border-hairline shadow-xl max-h-[70vh] overflow-y-auto outline-none"
+                style={{ minHeight: 200, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+                initial={{ y: '100%' }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+                transition={{ type: 'spring', damping: 28, stiffness: 300, mass: 0.8 }}
+                drag="y"
+                dragConstraints={{ top: 0, bottom: 200 }}
+                dragElastic={{ top: 0, bottom: 0.4 }}
+                onDragEnd={(_, info) => {
+                  if (info.offset.y > 80) setSelectedCard(null);
+                }}
+              >
+                <div className="p-4">
+                  <div className="w-8 h-1 rounded-full bg-hairline mx-auto mb-3" />
+                  {renderCardDetail(selectedCard)}
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>,
         document.body
       )}
     </div>
