@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Header } from './components/layout';
+import { Header, BottomNav } from './components/layout';
 import { HomePage, NotebooksPage, StatsPage, SettingsPage } from './pages';
 import ToastContainer from './components/ui/ToastContainer';
 import { useStore } from './stores/useStore';
@@ -26,9 +26,10 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-canvas">
       <Header activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab as Tab)} dueCount={dueCount} />
-      <main className="pb-20 lg:pb-8">
+      <main className="pb-16 md:pb-8">
         <div key={activeTab} className="page-enter">{renderPage()}</div>
       </main>
+      <BottomNav activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab as Tab)} dueCount={dueCount} />
       <ToastContainer />
     </div>
   );

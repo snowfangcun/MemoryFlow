@@ -34,7 +34,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, dueCount }) => 
             </div>
           </div>
 
-          <nav className="flex items-center gap-1 bg-surface-soft rounded-xl p-0.5">
+          <nav className="hidden md:flex items-center gap-1 bg-surface-soft rounded-xl p-0.5">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
