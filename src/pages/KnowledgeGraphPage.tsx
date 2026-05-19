@@ -1,8 +1,7 @@
-import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { motion } from 'framer-motion';
-import { GitBranch, HelpCircle, PenLine, ExternalLink, Link as LinkIcon, RotateCcw, Clock, X, Search, Filter } from 'lucide-react';
+import React, { useState, useMemo, useCallback } from 'react';
+import { GitBranch, HelpCircle, PenLine, ExternalLink, Link as LinkIcon, RotateCcw, Clock, Search, Filter } from 'lucide-react';
 import ForceGraph from '../components/ui/ForceGraph';
+import Modal from '../components/ui/Modal';
 import { useStore } from '../stores/useStore';
 import type { Card } from '../types';
 import { formatDistanceToNow } from 'date-fns';
@@ -13,7 +12,6 @@ const KnowledgeGraphPage: React.FC = () => {
   const [selectedNotebookId, setSelectedNotebookId] = useState<string | null>(null);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [drawerReady, setDrawerReady] = useState(false);
 
   const filteredCards = useMemo(() => {
     let result = selectedNotebookId ? cards.filter(c => c.notebookId === selectedNotebookId) : cards;
@@ -25,29 +23,8 @@ const KnowledgeGraphPage: React.FC = () => {
   }, [cards, selectedNotebookId, searchQuery]);
 
   const handleCardClick = useCallback((card: Card | null) => {
-    setDrawerReady(false);
     setSelectedCard(card);
   }, []);
-
-  const drawerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setSelectedCard(null);
-    };
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, []);
-
-  useEffect(() => {
-    if (selectedCard) {
-      document.body.style.overflow = 'hidden';
-      drawerRef.current?.focus();
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [selectedCard]);
 
   const stripWikilinks = (text: string) => text.replace(/\[\[([^\]]+)\]\]/g, '$1');
 
@@ -59,19 +36,14 @@ const KnowledgeGraphPage: React.FC = () => {
 
     return (
       <div className="space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="shrink-0 w-8 h-8 rounded-lg bg-surface-soft flex items-center justify-center">
-              {card.type === 'cloze' ? <PenLine size={15} className="text-muted" /> : <HelpCircle size={15} className="text-muted" />}
-            </span>
-            <div className="min-w-0">
-              <h3 className="text-sm font-semibold text-ink truncate">{stripWikilinks(card.type === 'cloze' ? card.front.replace(/\{\{([^}]+)\}\}/g, '____') : card.front)}</h3>
-              {notebook && <p className="text-[11px] text-muted">{notebook.name}</p>}
-            </div>
+        <div className="flex items-center gap-2">
+          <span className="shrink-0 w-8 h-8 rounded-lg bg-surface-soft flex items-center justify-center">
+            {card.type === 'cloze' ? <PenLine size={15} className="text-muted" /> : <HelpCircle size={15} className="text-muted" />}
+          </span>
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-ink">{stripWikilinks(card.type === 'cloze' ? card.front.replace(/\{\{([^}]+)\}\}/g, '____') : card.front)}</h3>
+            {notebook && <p className="text-[11px] text-muted">{notebook.name}</p>}
           </div>
-          <button onClick={() => setSelectedCard(null)} className="shrink-0 p-1 rounded-lg hover:bg-surface-soft transition-colors">
-            <X size={16} className="text-muted" />
-          </button>
         </div>
 
         <div className="flex gap-2 flex-wrap">
@@ -199,75 +171,28 @@ const KnowledgeGraphPage: React.FC = () => {
 
       {/* 主体 */}
       <div className="flex-1 min-h-0 px-5 py-4">
-        <div className="max-w-5xl mx-auto h-full flex gap-4">
-          {/* 图谱 */}
-          <div className={`flex-1 min-w-0 ${selectedCard ? 'hidden md:block' : ''}`}>
-            <div className="h-full rounded-xl border border-hairline overflow-hidden bg-surface-soft/30">
-              <ForceGraph
-                cards={filteredCards}
-                cardLinks={cardLinks}
-                notebooks={notebooks}
-                selectedNotebookId={selectedNotebookId}
-                onCardClick={handleCardClick}
-                highlightCardId={selectedCard?.id || null}
-              />
-            </div>
+        <div className="max-w-5xl mx-auto h-full">
+          <div className="h-full rounded-xl border border-hairline overflow-hidden bg-surface-soft/30">
+            <ForceGraph
+              cards={filteredCards}
+              cardLinks={cardLinks}
+              notebooks={notebooks}
+              selectedNotebookId={selectedNotebookId}
+              onCardClick={handleCardClick}
+              highlightCardId={selectedCard?.id || null}
+            />
           </div>
-
-          {/* 详情面板（桌面） */}
-          {selectedCard && (
-            <motion.div
-              className="hidden md:block w-80 shrink-0 overflow-y-auto"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <div className="bg-surface-card rounded-xl p-4 border border-hairline relative">
-                <button onClick={() => setSelectedCard(null)} className="absolute top-3 right-3 p-1 rounded-lg hover:bg-surface-soft transition-colors z-10">
-                  <X size={16} className="text-muted" />
-                </button>
-                {renderCardDetail(selectedCard)}
-              </div>
-            </motion.div>
-          )}
         </div>
       </div>
 
-      {/* 详情面板（移动端 - Portal） */}
-      {selectedCard && createPortal(
-        <>
-          <motion.div
-            className="md:hidden fixed inset-0 z-[70] bg-black/20"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.2 }}
-            onClick={() => setSelectedCard(null)}
-          />
-          <motion.div
-            ref={drawerRef}
-            tabIndex={-1}
-            className="md:hidden fixed inset-x-0 bottom-0 z-[70] bg-surface-card rounded-t-2xl border-t border-hairline shadow-xl max-h-[70vh] overflow-y-auto outline-none"
-            style={{ minHeight: 200, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 28, stiffness: 300, mass: 0.8 }}
-            drag={drawerReady ? 'y' : false}
-            dragConstraints={{ top: 0, bottom: 200 }}
-            dragElastic={{ top: 0, bottom: 0.4 }}
-            onDragEnd={(_, info) => {
-              if (info.offset.y > 80) setSelectedCard(null);
-            }}
-            onAnimationComplete={() => setDrawerReady(true)}
-          >
-            <div className="p-4">
-              <div className="w-8 h-1 rounded-full bg-hairline mx-auto mb-3" />
-              {renderCardDetail(selectedCard)}
-            </div>
-          </motion.div>
-        </>,
-        document.body
-      )}
+      {/* 卡片详情弹窗 */}
+      <Modal
+        isOpen={!!selectedCard}
+        onClose={() => setSelectedCard(null)}
+        title={selectedCard ? stripWikilinks(selectedCard.front.slice(0, 30)) + (selectedCard.front.length > 30 ? '…' : '') : ''}
+      >
+        {selectedCard && renderCardDetail(selectedCard)}
+      </Modal>
     </div>
   );
 };
