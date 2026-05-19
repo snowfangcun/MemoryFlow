@@ -149,19 +149,3 @@ body {
 .btn-press:active {
   transform: scale(0.97);
 }
-
-/* Ripple */
-.ripple-container {
-  position: relative;
-  overflow: hidden;
-}
-@keyframes ripple-effect {
-  to { transform: scale(15); opacity: 0; }
-}
-.ripple-span {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.35);
-  pointer-events: none;
-  animation: ripple-effect 0.5s ease-out forwards;
-}
