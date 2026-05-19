@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Eye, RotateCcw, Zap } from 'lucide-react';
 import Button from '../ui/Button';
 import type { Card, Rating } from '../../types';
@@ -13,6 +13,9 @@ interface ReviewCardProps {
 
 const ReviewCard: React.FC<ReviewCardProps> = ({ card, onRate, onExit, currentIndex, total }) => {
   const [showAnswer, setShowAnswer] = useState(false);
+  // 使用 ref 存储最新的 onRate，避免 useEffect 反复绑定/解绑事件
+  const onRateRef = useRef(onRate);
+  onRateRef.current = onRate;
 
   useEffect(() => { setShowAnswer(false); }, [card.id]);
 
@@ -20,14 +23,14 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ card, onRate, onExit, currentIn
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'Space') { e.preventDefault(); if (!showAnswer) setShowAnswer(true); }
       else if (showAnswer) {
-        if (e.code === 'Digit1' || e.code === 'Numpad1') onRate('forgot');
-        else if (e.code === 'Digit2' || e.code === 'Numpad2') onRate('hard');
-        else if (e.code === 'Digit3' || e.code === 'Numpad3') onRate('good');
+        if (e.code === 'Digit1' || e.code === 'Numpad1') onRateRef.current('forgot');
+        else if (e.code === 'Digit2' || e.code === 'Numpad2') onRateRef.current('hard');
+        else if (e.code === 'Digit3' || e.code === 'Numpad3') onRateRef.current('good');
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showAnswer, card.id, onRate]);
+  }, [showAnswer, card.id]); // 不再依赖 onRate
 
   const renderContent = (content: string, showAns = false) => {
     if (card.type === 'cloze') {
@@ -36,8 +39,10 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ card, onRate, onExit, currentIn
           const ans = part.slice(2, -2);
           return (
             <span key={i} className={`inline-block px-1.5 py-0.5 mx-0.5 rounded-md text-base md:text-lg font-medium ${
-              showAns ? 'bg-[#f5f0e8] text-ink border-b-2 border-primary' : 'bg-[#f5f0e8] text-body border-b-2 border-dashed border-hairline'
-            }`}>{ans}</span>
+              showAns
+                ? 'bg-[#f5f0e8] text-ink border-b-2 border-primary animate-fade-in'
+                : 'bg-transparent text-transparent border-b-2 border-dashed border-hairline min-w-[3em]'
+            }`}>{showAns ? ans : '\u00A0'.repeat(Math.max(ans.length, 3))}</span>
           );
         }
         return <span key={i}>{part}</span>;

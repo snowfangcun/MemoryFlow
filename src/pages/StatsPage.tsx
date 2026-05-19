@@ -2,13 +2,14 @@ import React, { useMemo } from 'react';
 import { Flame, Trophy, Target, TrendingUp, Clock, CheckCircle } from 'lucide-react';
 import HeatmapCalendar from '../components/ui/HeatmapCalendar';
 import { useStore } from '../stores/useStore';
+import { MASTERED_INTERVAL_MS } from '../types';
 
 const StatsPage: React.FC = () => {
   const { notebooks, cards, reviewLogs, settings, getStreak, getHeatmapData } = useStore();
 
   const stats = useMemo(() => ({
     streak: getStreak(),
-    masteredCards: cards.filter(c => c.interval >= 21).length,
+    masteredCards: cards.filter(c => c.interval >= MASTERED_INTERVAL_MS).length,
     reviewsThisWeek: reviewLogs.filter(r => r.reviewedAt >= Date.now() - 7 * 24 * 60 * 60 * 1000).length,
     ratingDist: {
       forgot: reviewLogs.filter(r => r.rating === 'forgot').length,
@@ -17,7 +18,7 @@ const StatsPage: React.FC = () => {
     },
     notebookStats: notebooks.map(n => {
       const nbCards = cards.filter(c => c.notebookId === n.id);
-      return { ...n, total: nbCards.length, mastered: nbCards.filter(c => c.interval >= 21).length, due: nbCards.filter(c => c.nextReview <= Date.now()).length };
+      return { ...n, total: nbCards.length, mastered: nbCards.filter(c => c.interval >= MASTERED_INTERVAL_MS).length, due: nbCards.filter(c => c.nextReview <= Date.now()).length };
     }),
     heatmap: getHeatmapData(),
   }), [cards, reviewLogs, notebooks, getStreak, getHeatmapData]);

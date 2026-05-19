@@ -1,4 +1,3 @@
-// 类型定义
 export interface Notebook {
   id: string;
   name: string;
@@ -16,8 +15,8 @@ export interface Card {
   type: CardType;
   front: string;
   back: string;
-  interval: number;
-  nextReview: number;
+  interval: number;   // 毫秒 (ms)
+  nextReview: number; // 下次复习时间戳
   reviewCount: number;
   easeFactor: number;
   createdAt: number;
@@ -43,14 +42,9 @@ export interface Settings {
   totalStudyDays: number;
 }
 
-export interface AppState {
-  notebooks: Notebook[];
-  cards: Card[];
-  reviewLogs: ReviewLog[];
-  settings: Settings;
-}
+// 351-351 复习法最长间隔（15天，毫秒）
+export const MASTERED_INTERVAL_MS = 15 * 24 * 60 * 60 * 1000;
 
-// 颜色选项 - Claude 风格
 export const NOTEBOOK_COLORS = [
   'linear-gradient(135deg, #cc785c, #d9947a)',
   'linear-gradient(135deg, #5db8a6, #7dc9ba)',

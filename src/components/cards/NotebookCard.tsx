@@ -15,7 +15,7 @@ const NotebookCard: React.FC<NotebookCardProps> = ({
   notebook, cardCount, masteredCount, onClick, onEdit, onDelete,
 }) => {
   const progress = cardCount > 0 ? Math.round((masteredCount / cardCount) * 100) : 0;
-  const accentColor = notebook.color.match(/#[0-9a-fA-F]{6}/)?.[0] || '#cc785c';
+  const accentColor = notebook.color.match(/#([0-9a-fA-F]{3}){1,2}\b/)?.[0] || '#cc785c';
 
   return (
     <div

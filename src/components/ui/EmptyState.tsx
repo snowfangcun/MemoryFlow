@@ -13,6 +13,7 @@ const icons = { book: BookOpen, card: Plus, review: Sparkles };
 
 const EmptyState: React.FC<EmptyStateProps> = ({ icon = 'book', title, description, action }) => {
   const Icon = icons[icon];
+
   return (
     <div className="flex flex-col items-center py-24 px-8 text-center">
       <div className="w-20 h-20 rounded-xl bg-surface-soft flex items-center justify-center mb-5">
@@ -20,7 +21,14 @@ const EmptyState: React.FC<EmptyStateProps> = ({ icon = 'book', title, descripti
       </div>
       <h3 className="heading-serif text-xl text-ink mb-1.5">{title}</h3>
       <p className="text-sm text-muted max-w-xs mb-6">{description}</p>
-      {action && <Button onClick={action.onClick}><Plus size={16} className="mr-1.5" />{action.label}</Button>}
+      {action && (
+        <Button onClick={action.onClick}>
+          {icon === 'review' ? <Sparkles size={16} className="mr-1.5" /> :
+           icon === 'card' ? <Plus size={16} className="mr-1.5" /> :
+           <BookOpen size={16} className="mr-1.5" />}
+          {action.label}
+        </Button>
+      )}
     </div>
   );
 };

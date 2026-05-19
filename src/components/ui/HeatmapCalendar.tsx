@@ -56,7 +56,7 @@ const HeatmapCalendar: React.FC<HeatmapCalendarProps> = ({ data, daysToShow = 84
         <div className="flex mb-2 pl-8">
           {monthLabels.map((label, i) => (
             <div key={i} className="text-xs text-muted"
-              style={{ marginLeft: i === 0 ? 0 : `${(label.index - (monthLabels[i - 1]?.index || 0) - 1) * 14}px` }}>
+              style={{ marginLeft: i === 0 ? 0 : `${(label.index - (monthLabels[i - 1]?.index || 0) - 1) * 15}px` }}>
               {label.month}
             </div>
           ))}
