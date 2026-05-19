@@ -27,7 +27,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, dueCount }) => 
             <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center">
               <Sparkles size={16} className="text-on-primary" />
             </div>
-            <span className="heading-serif text-xl font-medium text-ink">MemoryFlow</span>
+            <span className="brand-text text-xl text-ink">温故</span>
             <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-surface-soft border border-hairline">
               <GraduationCap size={13} className="text-primary" />
               <span className="text-xs font-medium text-muted">{rank.title}</span>

@@ -27,12 +27,13 @@
   --color-hairline: #e6dfd8;
   --color-hairline-soft: #ebe6df;
 
-  --font-family-serif: "Cormorant Garamond", "EB Garamond", "Noto Serif SC", serif;
-  --font-family-sans: "Inter", "Noto Sans SC", system-ui, sans-serif;
+  --font-family-brand: "ZCOOL XiaoWei", "Noto Serif SC", serif;
+  --font-family-serif: "Noto Serif SC", "Cormorant Garamond", serif;
+  --font-family-sans: "Noto Sans SC", "Inter", system-ui, sans-serif;
   --font-family-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;600;700&family=ZCOOL+XiaoWei&display=swap');
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
@@ -40,7 +41,7 @@ html { scroll-behavior: smooth; }
 body {
   margin: 0; padding: 0;
   background-color: var(--color-canvas);
-  font-family: "Inter", "Noto Sans SC", system-ui, sans-serif;
+  font-family: "Noto Sans SC", "Inter", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   color: var(--color-body);
   min-height: 100vh;
@@ -86,9 +87,15 @@ body {
 
 /* Headings */
 .heading-serif {
-  font-family: "Cormorant Garamond", "EB Garamond", "Noto Serif SC", serif;
-  font-weight: 500;
-  letter-spacing: -0.3px;
+  font-family: "Noto Serif SC", "Cormorant Garamond", serif;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.brand-text {
+  font-family: "ZCOOL XiaoWei", "Noto Serif SC", serif;
+  font-weight: 400;
+  letter-spacing: 0.04em;
 }
 
 /* Card */

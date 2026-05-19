@@ -122,7 +122,7 @@ const SettingsPage: React.FC = () => {
           <RotateCcw size={16} className="text-primary" /> 关于
         </h3>
         <p className="text-xs text-muted">
-          MemoryFlow v1.0 — 基于 "351-351" 艾宾浩斯间隔法的学习工具。
+          温故 v1.0 — 基于 "351-351" 艾宾浩斯间隔法的学习工具。
           数据存储在浏览器本地 (localStorage)，清除浏览器缓存前请先导出备份。
         </p>
       </section>
