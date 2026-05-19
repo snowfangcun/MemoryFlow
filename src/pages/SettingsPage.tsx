@@ -1,16 +1,18 @@
 import React, { useRef, useState } from 'react';
-import { Download, Upload, Target, RotateCcw } from 'lucide-react';
+import { Download, Upload, Target, RotateCcw, Trash2 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { ConfirmModal } from '../components/ui/Modal';
 import { useStore } from '../stores/useStore';
 import { useToastStore } from '../stores/useToastStore';
 
 const SettingsPage: React.FC = () => {
-  const { settings, updateSettings, exportData, importData, reviewLogs } = useStore();
+  const { settings, updateSettings, exportData, importData, reviewLogs, resetAllData } = useStore();
   const addToast = useToastStore(s => s.addToast);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   const [dailyGoal, setDailyGoal] = useState(String(settings.dailyGoal));
+  const [showResetModal, setShowResetModal] = useState(false);
 
   const handleSaveGoal = () => {
     const val = parseInt(dailyGoal, 10);
@@ -51,6 +53,13 @@ const SettingsPage: React.FC = () => {
     reader.onerror = () => { addToast('文件读取失败', 'error'); setImporting(false); };
     reader.readAsText(file);
     e.target.value = '';
+  };
+
+  const handleReset = () => {
+    resetAllData();
+    addToast('数据已重置', 'info');
+    setShowResetModal(false);
+    setTimeout(() => window.location.reload(), 800);
   };
 
   return (
@@ -94,6 +103,19 @@ const SettingsPage: React.FC = () => {
         </p>
       </section>
 
+      {/* 重置数据 */}
+      <section className="bg-surface-card rounded-xl p-5 mb-4 border border-danger/20">
+        <h3 className="text-sm font-semibold text-ink mb-1 flex items-center gap-2">
+          <Trash2 size={16} className="text-danger" /> 重置数据
+        </h3>
+        <p className="text-xs text-muted mb-4">
+          清除所有学习本、卡片和复习记录。此操作不可撤销，请先导出备份。
+        </p>
+        <Button variant="danger" onClick={() => setShowResetModal(true)}>
+          <Trash2 size={15} className="mr-1.5" /> 清除所有数据
+        </Button>
+      </section>
+
       {/* 关于 */}
       <section className="bg-surface-card rounded-xl p-5">
         <h3 className="text-sm font-semibold text-ink mb-1 flex items-center gap-2">
@@ -104,6 +126,17 @@ const SettingsPage: React.FC = () => {
           数据存储在浏览器本地 (localStorage)，清除浏览器缓存前请先导出备份。
         </p>
       </section>
+
+      <ConfirmModal
+        isOpen={showResetModal}
+        onClose={() => setShowResetModal(false)}
+        onConfirm={handleReset}
+        title="确认重置数据"
+        message="此操作将清除所有学习本、卡片、复习记录和等级数据。此操作不可撤销，确定要继续吗？"
+        confirmText="确认重置"
+        cancelText="取消"
+        variant="danger"
+      />
     </div>
   );
 };

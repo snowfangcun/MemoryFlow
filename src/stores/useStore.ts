@@ -48,6 +48,7 @@ interface AppStore {
 
   exportData: () => string;
   importData: (json: string) => string | null;
+  resetAllData: () => void;
 }
 
 const defaultSettings: Settings = {
@@ -243,6 +244,14 @@ export const useStore = create<AppStore>()(
           set({ notebooks: data.notebooks, folders: data.folders || [], cards: data.cards, cardLinks: data.cardLinks || [], reviewLogs: data.reviewLogs, settings: data.settings });
           return null;
         } catch { return 'JSON 解析失败'; }
+      },
+
+      resetAllData: () => {
+        set({
+          notebooks: [], folders: [], cards: [], cardLinks: [], reviewLogs: [],
+          settings: { ...defaultSettings, lastStudyDate: today(), streakDays: 1, totalStudyDays: 1 },
+        });
+        try { localStorage.removeItem(STORAGE_KEY); } catch {}
       },
     }),
     { name: STORAGE_KEY }
