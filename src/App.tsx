@@ -12,7 +12,7 @@ const tabOrder: Tab[] = ['home', 'notebooks', 'graph', 'stats', 'settings'];
 
 const pageVariants = {
   enter: (direction: number) => ({
-    x: direction > 0 ? 80 : -80,
+    x: direction > 0 ? 60 : -60,
     opacity: 0,
   }),
   center: {
@@ -20,11 +20,10 @@ const pageVariants = {
     opacity: 1,
     transition: { duration: 0.2, ease: 'easeOut' as const },
   },
-  exit: (direction: number) => ({
-    x: direction > 0 ? -60 : 60,
+  exit: {
     opacity: 0,
-    transition: { duration: 0.15, ease: 'easeIn' as const },
-  }),
+    transition: { duration: 0.12, ease: 'easeIn' as const },
+  },
 };
 
 const App: React.FC = () => {
@@ -63,7 +62,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-canvas overflow-x-hidden">
+    <div className="min-h-screen bg-canvas overflow-x-hidden relative">
       {!isReviewActive && (
         <Header activeTab={activeTab} onTabChange={(tab) => handleTabChange(tab as Tab)} dueCount={dueCount} />
       )}
