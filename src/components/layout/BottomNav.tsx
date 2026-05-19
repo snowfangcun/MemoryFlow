@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookMarked, BarChart3, Brain, Settings } from 'lucide-react';
+import { BookMarked, BarChart3, Brain, Settings, GitBranch } from 'lucide-react';
 
 interface BottomNavProps {
   activeTab: string;
@@ -10,6 +10,7 @@ interface BottomNavProps {
 const tabs = [
   { id: 'home', label: '首页', icon: Brain },
   { id: 'notebooks', label: '学习本', icon: BookMarked },
+  { id: 'graph', label: '图谱', icon: GitBranch },
   { id: 'stats', label: '统计', icon: BarChart3 },
   { id: 'settings', label: '设置', icon: Settings },
 ];

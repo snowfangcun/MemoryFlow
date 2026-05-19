@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookMarked, BarChart3, Brain, Sparkles, Settings, GraduationCap } from 'lucide-react';
+import { BookMarked, BarChart3, Brain, Sparkles, Settings, GraduationCap, GitBranch } from 'lucide-react';
 import { useStore } from '../../stores/useStore';
 import { getRankByLevel } from '../../types';
 
@@ -15,6 +15,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, dueCount }) => 
   const tabs = [
     { id: 'home', label: '首页', icon: Brain },
     { id: 'notebooks', label: '学习本', icon: BookMarked },
+    { id: 'graph', label: '图谱', icon: GitBranch },
     { id: 'stats', label: '统计', icon: BarChart3 },
     { id: 'settings', label: '设置', icon: Settings },
   ];

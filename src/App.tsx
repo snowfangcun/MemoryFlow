@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Header, BottomNav } from './components/layout';
-import { HomePage, NotebooksPage, StatsPage, SettingsPage } from './pages';
+import { HomePage, NotebooksPage, StatsPage, SettingsPage, KnowledgeGraphPage } from './pages';
 import ToastContainer from './components/ui/ToastContainer';
 import { useStore } from './stores/useStore';
 import './styles/globals.css';
 
-type Tab = 'home' | 'notebooks' | 'stats' | 'settings';
+type Tab = 'home' | 'notebooks' | 'graph' | 'stats' | 'settings';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('home');
@@ -27,6 +27,7 @@ const App: React.FC = () => {
     switch (activeTab) {
       case 'home': return <HomePage />;
       case 'notebooks': return <NotebooksPage />;
+      case 'graph': return <KnowledgeGraphPage />;
       case 'stats': return <StatsPage />;
       case 'settings': return <SettingsPage />;
       default: return <HomePage />;
