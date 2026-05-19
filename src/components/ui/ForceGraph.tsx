@@ -120,7 +120,6 @@ const ForceGraph: React.FC<ForceGraphProps> = ({ cards, cardLinks, notebooks, se
     if (!networkRef.current) return;
     if (highlightCardId) {
       networkRef.current.selectNodes([highlightCardId], false);
-      networkRef.current.focus(highlightCardId, { scale: 1.5, animation: { duration: 300, easingFunction: 'easeInOutQuad' } });
     } else {
       networkRef.current.selectNodes([]);
     }
