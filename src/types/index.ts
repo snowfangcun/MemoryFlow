@@ -1,50 +1,35 @@
-export interface Notebook {
-  id: string;
-  name: string;
-  description?: string;
-  color: string;
-  createdAt: number;
-  updatedAt: number;
-}
-
+export interface Notebook { id: string; name: string; description?: string; color: string; createdAt: number; updatedAt: number; }
 export type CardType = 'question' | 'cloze';
 
 export interface Card {
-  id: string;
-  notebookId: string;
-  type: CardType;
-  front: string;
-  back: string;
-  interval: number;   // 毫秒 (ms)
-  nextReview: number; // 下次复习时间戳
-  reviewCount: number;
-  easeFactor: number;
-  createdAt: number;
-  updatedAt: number;
+  id: string; notebookId: string; type: CardType; front: string; back: string;
+  interval: number; nextReview: number; reviewCount: number; easeFactor: number;
+  tags: string[];
+  createdAt: number; updatedAt: number;
 }
 
 export type Rating = 'forgot' | 'hard' | 'good';
 
-export interface ReviewLog {
+export interface CardLink {
   id: string;
-  cardId: string;
-  rating: Rating;
-  reviewedAt: number;
-  previousInterval: number;
-  newInterval: number;
+  sourceId: string;   // 含有 [[Target]] 的卡片
+  targetId: string;   // 被链接的卡片
+  targetName: string; // 链接文字（冗余存储方便显示）
+}
+
+export interface ReviewLog {
+  id: string; cardId: string; rating: Rating; reviewedAt: number; previousInterval: number; newInterval: number;
 }
 
 export interface Settings {
   dailyGoal: number;
-  theme: 'dark';
+  theme: 'light' | 'dark';
   lastStudyDate: string;
   streakDays: number;
   totalStudyDays: number;
 }
 
-// 351-351 复习法最长间隔（15天，毫秒）
 export const MASTERED_INTERVAL_MS = 15 * 24 * 60 * 60 * 1000;
-
 export const NOTEBOOK_COLORS = [
   'linear-gradient(135deg, #cc785c, #d9947a)',
   'linear-gradient(135deg, #5db8a6, #7dc9ba)',

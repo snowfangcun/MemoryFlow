@@ -1,13 +1,14 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { nanoid } from 'nanoid';
-import type { Notebook, Card, ReviewLog, Settings, Rating } from '../types';
+import type { Notebook, Card, CardLink, ReviewLog, Settings, Rating } from '../types';
 
 const STORAGE_KEY = 'memoryflow_store';
 
 interface AppStore {
   notebooks: Notebook[];
   cards: Card[];
+  cardLinks: CardLink[];
   reviewLogs: ReviewLog[];
   settings: Settings;
 
@@ -15,12 +16,19 @@ interface AppStore {
   updateNotebook: (id: string, updates: Partial<Notebook>) => void;
   deleteNotebook: (id: string) => void;
 
-  addCard: (notebookId: string, type: 'question' | 'cloze', front: string, back: string) => Card;
+  addCard: (notebookId: string, type: 'question' | 'cloze', front: string, back: string, tags?: string[]) => Card;
   updateCard: (id: string, updates: Partial<Card>) => void;
   deleteCard: (id: string) => void;
 
+  /** 手动刷新卡片的 [[链接]] */
+  refreshCardLinks: (cardId: string) => void;
+
   reviewCard: (cardId: string, rating: Rating) => void;
   getDueCards: () => Card[];
+
+  getBacklinks: (cardId: string) => CardLink[];
+  getForwardLinks: (cardId: string) => CardLink[];
+  getAllTags: () => string[];
 
   getTodayStats: () => { dueCount: number; reviewedToday: number };
   getStreak: () => number;
@@ -29,91 +37,60 @@ interface AppStore {
   updateSettings: (updates: Partial<Settings>) => void;
   initializeSettings: () => void;
 
-  // 导入/导出
   exportData: () => string;
   importData: (json: string) => string | null;
 }
 
 const defaultSettings: Settings = {
-  dailyGoal: 20,
-  theme: 'dark',
-  lastStudyDate: '',
-  streakDays: 0,
-  totalStudyDays: 0,
+  dailyGoal: 20, theme: 'dark', lastStudyDate: '', streakDays: 0, totalStudyDays: 0,
 };
 
-// ── 日期工具 ──
-const getDateString = (timestamp: number): string => new Date(timestamp).toISOString().split('T')[0];
+// ── 工具函数 ──
+const getDateString = (t: number): string => new Date(t).toISOString().split('T')[0];
 const today = (): string => getDateString(Date.now());
 
-// ── "351-351" 复习间隔法 ──
-// 各次复习间隔（毫秒）：5分钟 → 30分钟 → 12小时 → 1天 → 2天 → 4天 → 7天 → 15天
 const MS = { MIN: 60_000, HOUR: 3_600_000, DAY: 86_400_000 };
-const REVIEW_INTERVALS_MS = [
-  5 * MS.MIN,           // 第1次：5分钟
-  30 * MS.MIN,          // 第2次：30分钟
-  12 * MS.HOUR,         // 第3次：12小时
-  1 * MS.DAY,           // 第4次：1天
-  2 * MS.DAY,           // 第5次：2天
-  4 * MS.DAY,           // 第6次：4天
-  7 * MS.DAY,           // 第7次：7天
-  15 * MS.DAY,          // 第8次：15天
-];
-const MAX_INTERVAL_MS = 15 * MS.DAY; // 最长间隔
-
-// rating → SM-2 quality
+const REVIEW_INTERVALS_MS = [5 * MS.MIN, 30 * MS.MIN, 12 * MS.HOUR, 1 * MS.DAY, 2 * MS.DAY, 4 * MS.DAY, 7 * MS.DAY, 15 * MS.DAY];
 const ratingMap: Record<Rating, number> = { forgot: 1, hard: 3, good: 5 };
 
-const calculateNextReview = (
-  card: Card,
-  rating: Rating,
-  reviewedAt: number
-): { interval: number; nextReview: number; newEF: number } => {
+const calculateNextReview = (card: Card, rating: Rating, reviewedAt: number) => {
   const q = ratingMap[rating];
-  const oldEF = card.easeFactor;
-
-  // 1. SM-2 更新简易度因子 EF
-  let newEF = oldEF + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02));
+  let newEF = card.easeFactor + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02));
   if (newEF < 1.3) newEF = 1.3;
-
-  // 2. 计算间隔（351-351 固定间隔 + EF 自适应微调）
   let intervalMs: number;
-
   if (rating === 'forgot') {
-    // 遗忘 → 重置到第1次间隔（5分钟）
     intervalMs = REVIEW_INTERVALS_MS[0];
   } else {
-    // 基准：当前完成的复习次数对应的间隔表位置
     let idx = Math.min(card.reviewCount, REVIEW_INTERVALS_MS.length - 1);
-
-    // EF 自适应微调
-    if (rating === 'good' && newEF > 3.0) {
-      // 总是简单且 EF 很高 → 跳一级，表明这张卡你已高度掌握
-      idx = Math.min(idx + 1, REVIEW_INTERVALS_MS.length - 1);
-    } else if (rating === 'hard' && newEF < 1.5) {
-      // 觉得模糊且 EF 已较低 → 多退一级，额外加固
-      idx = Math.max(0, idx - 2);
-    } else if (rating === 'hard') {
-      // 一般 → 退一级
-      idx = Math.max(0, idx - 1);
-    }
-    // good 且 EF 正常 → 保持 idx 不变
-
+    if (rating === 'good' && newEF > 3.0) idx = Math.min(idx + 1, REVIEW_INTERVALS_MS.length - 1);
+    else if (rating === 'hard' && newEF < 1.5) idx = Math.max(0, idx - 2);
+    else if (rating === 'hard') idx = Math.max(0, idx - 1);
     intervalMs = REVIEW_INTERVALS_MS[idx];
   }
-
-  // 3. 计算下次复习时间
-  // 短间隔（< 1天）精确计算；长间隔（>= 1天）对齐到当日 0 点
-  let nextReview: number;
-  if (intervalMs < MS.DAY) {
-    nextReview = reviewedAt + intervalMs;
-  } else {
-    const d = new Date(reviewedAt + intervalMs);
-    d.setHours(0, 0, 0, 0);
-    nextReview = d.getTime();
-  }
-
+  const nextReview = intervalMs < MS.DAY ? reviewedAt + intervalMs : (() => { const d = new Date(reviewedAt + intervalMs); d.setHours(0, 0, 0, 0); return d.getTime(); })();
   return { interval: intervalMs, nextReview, newEF };
+};
+
+/** 从文本中解析 [[链接]] 并生成/更新 CardLink */
+const parseAndUpdateLinks = (cardId: string, front: string, back: string, allCards: Card[], oldLinks: CardLink[]): CardLink[] => {
+  const linkNames = new Set<string>();
+  const text = front + ' ' + back;
+  const regex = /\[\[([^\]]+)\]\]/g;
+  let m;
+  while ((m = regex.exec(text)) !== null) linkNames.add(m[1]);
+
+  const newLinks: CardLink[] = [];
+  linkNames.forEach(name => {
+    // 找到被引用的卡片（front 包含该名称）
+    const target = allCards.find(c => c.id !== cardId && c.front.includes(name));
+    newLinks.push({
+      id: nanoid(8),
+      sourceId: cardId,
+      targetId: target?.id || '',
+      targetName: name,
+    });
+  });
+  return newLinks;
 };
 
 export const useStore = create<AppStore>()(
@@ -121,177 +98,115 @@ export const useStore = create<AppStore>()(
     (set, get) => ({
       notebooks: [],
       cards: [],
+      cardLinks: [],
       reviewLogs: [],
       settings: defaultSettings,
 
       initializeSettings: () => {
         const { settings } = get();
-        if (!settings.lastStudyDate) {
-          set({ settings: { ...settings, lastStudyDate: today() } });
-        }
+        if (!settings.lastStudyDate) set({ settings: { ...settings, lastStudyDate: today() } });
       },
 
-      // Notebook Actions
+      // Notebooks
       addNotebook: (name, description, color) => {
-        const notebook: Notebook = {
-          id: nanoid(), name, description,
-          color: color || 'linear-gradient(135deg, #cc785c, #d9947a)',
-          createdAt: Date.now(), updatedAt: Date.now(),
-        };
-        set((state) => ({ notebooks: [...state.notebooks, notebook] }));
+        const notebook: Notebook = { id: nanoid(), name, description, color: color || 'linear-gradient(135deg, #cc785c, #d9947a)', createdAt: Date.now(), updatedAt: Date.now() };
+        set(s => ({ notebooks: [...s.notebooks, notebook] }));
         return notebook;
       },
+      updateNotebook: (id, updates) => set(s => ({ notebooks: s.notebooks.map(n => n.id === id ? { ...n, ...updates, updatedAt: Date.now() } : n) })),
+      deleteNotebook: (id) => set(s => ({ notebooks: s.notebooks.filter(n => n.id !== id), cards: s.cards.filter(c => c.notebookId !== id), cardLinks: s.cardLinks.filter(l => l.sourceId !== id && l.targetId !== id) })),
 
-      updateNotebook: (id, updates) => {
-        set((state) => ({
-          notebooks: state.notebooks.map((n) =>
-            n.id === id ? { ...n, ...updates, updatedAt: Date.now() } : n
-          ),
-        }));
-      },
-
-      deleteNotebook: (id) => {
-        set((state) => ({
-          notebooks: state.notebooks.filter((n) => n.id !== id),
-          cards: state.cards.filter((c) => c.notebookId !== id),
-        }));
-      },
-
-      // Card Actions
-      addCard: (notebookId, type, front, back) => {
-        const card: Card = {
-          id: nanoid(), notebookId, type, front, back,
-          interval: 1, nextReview: Date.now(),
-          reviewCount: 0, easeFactor: 2.5,
-          createdAt: Date.now(), updatedAt: Date.now(),
-        };
-        set((state) => ({ cards: [...state.cards, card] }));
+      // Cards
+      addCard: (notebookId, type, front, back, tags) => {
+        const card: Card = { id: nanoid(), notebookId, type, front, back, interval: 1, nextReview: Date.now(), reviewCount: 0, easeFactor: 2.5, tags: tags || [], createdAt: Date.now(), updatedAt: Date.now() };
+        set(s => {
+          const newLinks = parseAndUpdateLinks(card.id, front, back, [...s.cards, card], s.cardLinks);
+          return { cards: [...s.cards, card], cardLinks: [...s.cardLinks, ...newLinks] };
+        });
         return card;
       },
+      updateCard: (id, updates) => set(s => {
+        const updatedCards = s.cards.map(c => c.id === id ? { ...c, ...updates, updatedAt: Date.now() } : c);
+        const card = updatedCards.find(c => c.id === id);
+        // 如果 front/back/tags 有变化，重新解析链接
+        if (card && (updates.front !== undefined || updates.back !== undefined || updates.tags !== undefined)) {
+          const otherLinks = s.cardLinks.filter(l => l.sourceId !== id);
+          const newLinks = parseAndUpdateLinks(id, card.front, card.back, updatedCards, s.cardLinks);
+          return { cards: updatedCards, cardLinks: [...otherLinks, ...newLinks] };
+        }
+        return { cards: updatedCards };
+      }),
+      deleteCard: (id) => set(s => ({ cards: s.cards.filter(c => c.id !== id), cardLinks: s.cardLinks.filter(l => l.sourceId !== id && l.targetId !== id) })),
 
-      updateCard: (id, updates) => {
-        set((state) => ({
-          cards: state.cards.map((c) =>
-            c.id === id ? { ...c, ...updates, updatedAt: Date.now() } : c
-          ),
-        }));
+      refreshCardLinks: (cardId) => set(s => {
+        const card = s.cards.find(c => c.id === cardId);
+        if (!card) return {};
+        const otherLinks = s.cardLinks.filter(l => l.sourceId !== cardId);
+        const newLinks = parseAndUpdateLinks(cardId, card.front, card.back, s.cards, s.cardLinks);
+        return { cardLinks: [...otherLinks, ...newLinks] };
+      }),
+
+      // Links & Tags
+      getBacklinks: (cardId) => get().cardLinks.filter(l => l.targetId === cardId),
+      getForwardLinks: (cardId) => get().cardLinks.filter(l => l.sourceId === cardId),
+      getAllTags: () => {
+        const allTags = new Set<string>();
+        get().cards.forEach(c => c.tags?.forEach(t => allTags.add(t)));
+        return [...allTags].sort();
       },
 
-      deleteCard: (id) => {
-        set((state) => ({
-          cards: state.cards.filter((c) => c.id !== id),
-          reviewLogs: state.reviewLogs.filter((r) => r.cardId !== id),
-        }));
-      },
-
-      // Review Actions
+      // Review
       reviewCard: (cardId, rating) => {
         const { cards, reviewLogs, settings } = get();
-        const card = cards.find((c) => c.id === cardId);
+        const card = cards.find(c => c.id === cardId);
         if (!card) return;
-
         const reviewedAt = Date.now();
         const { interval, nextReview, newEF } = calculateNextReview(card, rating, reviewedAt);
-
-        const reviewLog: ReviewLog = {
-          id: nanoid(), cardId, rating,
-          reviewedAt,
-          previousInterval: card.interval,
-          newInterval: interval,
-        };
-
-        // 连续打卡计算
+        const reviewLog: ReviewLog = { id: nanoid(), cardId, rating, reviewedAt, previousInterval: card.interval, newInterval: interval };
         let newSettings = { ...settings };
         const todayStr = today();
-        const yesterday = (): string => {
-          const d = new Date(); d.setDate(d.getDate() - 1);
-          return getDateString(d.getTime());
-        };
-
-        if (settings.lastStudyDate === todayStr) {
-          // 今天已学过
-        } else if (settings.lastStudyDate === yesterday()) {
-          newSettings.streakDays = settings.streakDays + 1;
-          newSettings.totalStudyDays = settings.totalStudyDays + 1;
-        } else if (!settings.lastStudyDate) {
-          newSettings.streakDays = 1;
-          newSettings.totalStudyDays = 1;
-        } else {
-          newSettings.streakDays = 1;
-          newSettings.totalStudyDays = settings.totalStudyDays + 1;
-        }
+        const yesterday = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return getDateString(d.getTime()); })();
+        if (settings.lastStudyDate === todayStr) {}
+        else if (settings.lastStudyDate === yesterday) { newSettings.streakDays = settings.streakDays + 1; newSettings.totalStudyDays = settings.totalStudyDays + 1; }
+        else if (!settings.lastStudyDate) { newSettings.streakDays = 1; newSettings.totalStudyDays = 1; }
+        else { newSettings.streakDays = 1; newSettings.totalStudyDays = settings.totalStudyDays + 1; }
         newSettings.lastStudyDate = todayStr;
-
-        set((state) => ({
-          cards: state.cards.map((c) =>
-            c.id === cardId
-              ? { ...c, interval, nextReview, easeFactor: newEF, reviewCount: c.reviewCount + 1, updatedAt: Date.now() }
-              : c
-          ),
-          reviewLogs: [...state.reviewLogs, reviewLog],
-          settings: newSettings,
-        }));
+        set(s => ({ cards: s.cards.map(c => c.id === cardId ? { ...c, interval, nextReview, easeFactor: newEF, reviewCount: c.reviewCount + 1, updatedAt: Date.now() } : c), reviewLogs: [...s.reviewLogs, reviewLog], settings: newSettings }));
       },
-
-      getDueCards: () => {
-        const { cards } = get();
-        return cards.filter((c) => c.nextReview <= Date.now());
-      },
+      getDueCards: () => get().cards.filter(c => c.nextReview <= Date.now()),
 
       getTodayStats: () => {
         const { cards, reviewLogs } = get();
-        const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-        const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
-
-        const dueCards = cards.filter((c) => c.nextReview <= Date.now());
-        const reviewedToday = reviewLogs.filter(
-          (r) => r.reviewedAt >= todayStart.getTime() && r.reviewedAt <= todayEnd.getTime()
-        ).length;
-
-        return { dueCount: dueCards.length, reviewedToday };
+        const start = new Date(); start.setHours(0, 0, 0, 0);
+        const end = new Date(); end.setHours(23, 59, 59, 999);
+        return { dueCount: cards.filter(c => c.nextReview <= Date.now()).length, reviewedToday: reviewLogs.filter(r => r.reviewedAt >= start.getTime() && r.reviewedAt <= end.getTime()).length };
       },
-
       getStreak: () => {
         const { settings } = get();
-        const todayStr = today();
-        const yesterday = (): string => {
-          const d = new Date(); d.setDate(d.getDate() - 1);
-          return getDateString(d.getTime());
-        };
-
-        if (settings.lastStudyDate === todayStr || settings.lastStudyDate === yesterday()) {
-          return settings.streakDays;
-        }
+        const t = today();
+        const y = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return getDateString(d.getTime()); })();
+        if (settings.lastStudyDate === t || settings.lastStudyDate === y) return settings.streakDays;
         return 0;
       },
-
       getHeatmapData: () => {
-        const { reviewLogs } = get();
-        const heatmap = new Map<string, number>();
-        reviewLogs.forEach((log) => {
-          const date = getDateString(log.reviewedAt);
-          heatmap.set(date, (heatmap.get(date) || 0) + 1);
-        });
-        return heatmap;
+        const h = new Map<string, number>();
+        get().reviewLogs.forEach(l => { const d = getDateString(l.reviewedAt); h.set(d, (h.get(d) || 0) + 1); });
+        return h;
       },
 
-      // 导出/导入
+      updateSettings: (updates) => set(s => ({ settings: { ...s.settings, ...updates } })),
+
       exportData: () => {
-        const { notebooks, cards, reviewLogs, settings } = get();
-        return JSON.stringify({ notebooks, cards, reviewLogs, settings, version: 1 }, null, 2);
+        const { notebooks, cards, reviewLogs, settings, cardLinks } = get();
+        return JSON.stringify({ version: 1, notebooks, cards, cardLinks, reviewLogs, settings }, null, 2);
       },
-
-      importData: (json: string): string | null => {
+      importData: (json) => {
         try {
           const data = JSON.parse(json);
-          if (!data.notebooks || !data.cards || !data.reviewLogs || !data.settings) {
-            return '数据格式不正确，缺少必要字段';
-          }
-          set({ notebooks: data.notebooks, cards: data.cards, reviewLogs: data.reviewLogs, settings: data.settings });
+          if (!data.notebooks || !data.cards || !data.reviewLogs || !data.settings) return '数据格式不正确';
+          set({ notebooks: data.notebooks, cards: data.cards, cardLinks: data.cardLinks || [], reviewLogs: data.reviewLogs, settings: data.settings });
           return null;
-        } catch {
-          return 'JSON 格式解析失败，请检查文件内容';
-        }
+        } catch { return 'JSON 解析失败'; }
       },
     }),
     { name: STORAGE_KEY }
