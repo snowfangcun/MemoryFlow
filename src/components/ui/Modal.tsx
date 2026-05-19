@@ -19,19 +19,21 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50" onClick={onClose}>
       <div className="fixed inset-0 bg-black/20" />
-      <div className="relative w-full max-w-md bg-canvas rounded-xl shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-hairline">
-          <h2 className="text-base font-semibold text-ink">{title}</h2>
-          <button onClick={onClose} className="p-1 rounded-md hover:bg-surface-soft transition-colors">
-            <X size={18} className="text-muted" />
-          </button>
+      <div className="fixed inset-0 flex items-center justify-center p-4 pointer-events-none">
+        <div className="pointer-events-auto w-full max-w-md bg-canvas rounded-xl shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-hairline">
+            <h2 className="text-base font-semibold text-ink">{title}</h2>
+            <button onClick={onClose} className="p-1 rounded-md hover:bg-surface-soft transition-colors">
+              <X size={18} className="text-muted" />
+            </button>
+          </div>
+          <div className="px-5 py-4">{children}</div>
+          {footer && (
+            <div className="flex justify-end gap-2.5 px-5 py-4 bg-surface-soft border-t border-hairline">{footer}</div>
+          )}
         </div>
-        <div className="px-5 py-4">{children}</div>
-        {footer && (
-          <div className="flex justify-end gap-2.5 px-5 py-4 bg-surface-soft border-t border-hairline">{footer}</div>
-        )}
       </div>
     </div>
   );
