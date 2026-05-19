@@ -52,7 +52,7 @@ interface AppStore {
 }
 
 const defaultSettings: Settings = {
-  dailyGoal: 20, theme: 'dark', lastStudyDate: '', streakDays: 0, totalStudyDays: 0, exp: 0, level: 1,
+  dailyGoal: 20, theme: 'light', lastStudyDate: '', streakDays: 0, totalStudyDays: 0, exp: 0, level: 1,
 };
 
 // ── 工具函数 ──

@@ -9,8 +9,18 @@ type Tab = 'home' | 'notebooks' | 'stats' | 'settings';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('home');
-  const { getDueCards, initializeSettings } = useStore();
+  const { getDueCards, initializeSettings, settings } = useStore();
   useEffect(() => { initializeSettings(); }, [initializeSettings]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (settings.theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }, [settings.theme]);
+
   const dueCount = getDueCards().length;
 
   const renderPage = () => {

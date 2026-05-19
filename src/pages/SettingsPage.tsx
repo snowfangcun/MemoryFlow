@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Download, Upload, Target, RotateCcw, Trash2 } from 'lucide-react';
+import { Download, Upload, Target, RotateCcw, Trash2, Sun, Moon } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { ConfirmModal } from '../components/ui/Modal';
@@ -78,6 +78,38 @@ const SettingsPage: React.FC = () => {
               onChange={e => setDailyGoal(e.target.value)} placeholder="20" />
           </div>
           <Button onClick={handleSaveGoal}>保存</Button>
+        </div>
+      </section>
+
+      {/* 主题切换 */}
+      <section className="bg-surface-card rounded-xl p-5 mb-4">
+        <h3 className="text-sm font-semibold text-ink mb-1 flex items-center gap-2">
+          {settings.theme === 'dark' ? <Moon size={16} className="text-primary" /> : <Sun size={16} className="text-primary" />} 界面主题
+        </h3>
+        <p className="text-xs text-muted mb-4">选择你偏好的显示模式</p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => updateSettings({ theme: 'light' })}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+              settings.theme === 'light'
+                ? 'border-primary bg-primary/10 text-ink'
+                : 'border-hairline text-muted hover:text-ink hover:bg-surface-soft'
+            }`}
+          >
+            <Sun size={16} /> 亮色
+          </button>
+          <button
+            type="button"
+            onClick={() => updateSettings({ theme: 'dark' })}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+              settings.theme === 'dark'
+                ? 'border-primary bg-primary/10 text-ink'
+                : 'border-hairline text-muted hover:text-ink hover:bg-surface-soft'
+            }`}
+          >
+            <Moon size={16} /> 暗色
+          </button>
         </div>
       </section>
 
