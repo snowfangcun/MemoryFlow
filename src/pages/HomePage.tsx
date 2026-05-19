@@ -11,7 +11,11 @@ import { useToastStore } from '../stores/useToastStore';
 import { getRankByLevel, getNextRank, getExpProgress } from '../types';
 import type { Rating } from '../types';
 
-const HomePage: React.FC = () => {
+interface HomePageProps {
+  onReviewChange?: (active: boolean) => void;
+}
+
+const HomePage: React.FC<HomePageProps> = ({ onReviewChange }) => {
   const { notebooks, folders, cards, getDueCards, getTodayStats, getStreak, reviewCard, addNotebook, settings } = useStore();
   const addToast = useToastStore(s => s.addToast);
   const [isReviewing, setIsReviewing] = useState(false);
@@ -42,7 +46,6 @@ const HomePage: React.FC = () => {
       if (currentCardIndex < dueCards.length - 1) {
         setCurrentCardIndex(p => p + 1);
       } else {
-        // 全部完成 → 显示祝贺页
         setReviewRatings(ratingsRef.current);
         ratingsRef.current = [];
         setIsReviewing(false);
@@ -68,7 +71,7 @@ const HomePage: React.FC = () => {
       <ReviewCompletion
         reviewedCount={reviewRatings.length}
         ratings={reviewRatings}
-        onFinish={() => setShowCompletion(false)}
+        onFinish={() => { setShowCompletion(false); onReviewChange?.(false); }}
       />
     );
   }
@@ -80,13 +83,13 @@ const HomePage: React.FC = () => {
         card={dueCards[currentCardIndex]}
         onRate={handleRate}
         onExit={() => {
-          // 退出复习：保存已复习的进度
           if (ratingsRef.current.length > 0) {
             addToast(`已复习 ${ratingsRef.current.length} 张，进度已保存`, 'info');
             ratingsRef.current = [];
           }
           setIsReviewing(false);
           setCurrentCardIndex(0);
+          onReviewChange?.(false);
         }}
         currentIndex={currentCardIndex}
         total={dueCards.length}
@@ -118,7 +121,7 @@ const HomePage: React.FC = () => {
               </p>
               <div className="flex flex-wrap justify-center md:justify-start gap-3">
                 {dueCards.length > 0 && (
-                  <Button size="lg" onClick={() => setIsReviewing(true)}>
+                  <Button size="lg" onClick={() => { setIsReviewing(true); onReviewChange?.(true); }}>
                     <Play size={17} className="mr-1.5" /> 开始复习
                   </Button>
                 )}
