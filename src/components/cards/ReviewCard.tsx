@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import { Eye, RotateCcw, Zap, Clock } from 'lucide-react';
 import Button from '../ui/Button';
 import { ConfirmModal } from '../ui/Modal';
@@ -103,80 +104,95 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ card, onRate, onExit, currentIn
         <div className="h-full bg-primary transition-all duration-300" style={{ width: `${progress}%` }} />
       </div>
 
+      {/* 3D 翻转区域 */}
       <div className="flex-1 flex items-center justify-center p-5">
-        {!showAnswer ? (
-          <div key="q" className="w-full max-w-xl enter">
-            <div className="bg-surface-card rounded-xl p-8 md:p-10 min-h-[240px] flex items-center justify-center">
-              <p className="text-xl md:text-2xl text-ink leading-relaxed text-center font-[450]">
-                {renderContent(card.front)}
-              </p>
-            </div>
-            <div className="flex justify-center mt-6">
-              <Button size="lg" onClick={() => setShowAnswer(true)}>
-                <Eye size={18} className="mr-2" /> 显示答案 <span className="ml-3 text-xs opacity-60">空格键</span>
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div key="a" className="w-full max-w-xl enter">
-            <div className="bg-surface-soft rounded-lg p-3 mb-3 text-center">
-              <p className="text-sm text-muted">{renderContent(card.front)}</p>
-            </div>
-            <div className="bg-surface-card rounded-xl p-8 md:p-10 min-h-[160px] flex items-center justify-center border-2 border-primary/30">
-              <p className="text-xl md:text-2xl text-ink leading-relaxed text-center font-[450]">
-                {card.type === 'cloze' ? renderContent(card.front, true) : card.back}
-              </p>
-            </div>
-
-            {/* 复习历史 */}
-            {cardHistory.length > 0 && (
-              <div className="mt-4 max-w-xl mx-auto w-full">
-                <button
-                  onClick={() => setShowHistory(v => !v)}
-                  className="flex items-center gap-1.5 text-xs text-muted hover:text-ink transition-colors"
-                >
-                  <Clock size={12} />
-                  复习历史（{cardHistory.length}次）
-                  {masteryTrend && (
-                    <span className={`ml-1 font-medium ${masteryTrend.color}`}>{masteryTrend.text}</span>
-                  )}
-                </button>
-                {showHistory && (
-                  <div className="mt-2 p-3 rounded-lg bg-surface-soft border border-hairline enter">
-                    <div className="flex flex-wrap gap-1.5">
-                      {[...cardHistory].reverse().map((log, i) => (
-                        <span
-                          key={log.id}
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium ${ratingBg[log.rating]}`}
-                        >
-                          <span className={`w-1.5 h-1.5 rounded-full ${ratingColor[log.rating]}`} />
-                          {ratingLabel[log.rating]}
-                        </span>
-                      ))}
-                    </div>
-                    <p className="text-[10px] text-muted-soft mt-1.5">
-                      最近一次：{formatDistanceToNow(cardHistory[0].reviewedAt, { addSuffix: true, locale: zhCN })}
-                    </p>
-                  </div>
-                )}
+        <div className="w-full max-w-xl" style={{ perspective: '1000px' }}>
+          <motion.div
+            animate={{ rotateY: showAnswer ? 180 : 0 }}
+            transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+            style={{ transformStyle: 'preserve-3d' }}
+            className="grid grid-cols-[1fr]"
+          >
+            {/* 正面：问题 */}
+            <div
+              className="col-start-1 row-start-1"
+              style={{ backfaceVisibility: 'hidden' }}
+            >
+              <div className="bg-surface-card rounded-xl p-8 md:p-10 min-h-[240px] flex items-center justify-center">
+                <p className="text-xl md:text-2xl text-ink leading-relaxed text-center font-[450]">
+                  {renderContent(card.front)}
+                </p>
               </div>
-            )}
-
-            <div className="flex justify-center gap-3 mt-5 enter enter-d1">
-              <Button variant="danger" onClick={() => onRate('forgot')}>
-                <RotateCcw size={16} className="mr-1.5" /> 生疏 <span className="ml-2 text-xs opacity-60">1</span>
-              </Button>
-              <button onClick={() => onRate('hard')}
-                className="inline-flex items-center justify-center h-10 px-5 rounded-lg text-sm font-medium transition-all bg-[#d4a017] text-white hover:bg-[#b8890f] btn-press">
-                <Zap size={16} className="mr-1.5" /> 一般 <span className="ml-2 text-xs opacity-60">2</span>
-              </button>
-              <button onClick={() => onRate('good')}
-                className="inline-flex items-center justify-center h-10 px-5 rounded-lg text-sm font-medium transition-all bg-[#5db872] text-white hover:bg-[#4da362] btn-press">
-                <Zap size={16} className="mr-1.5" /> 简单 <span className="ml-2 text-xs opacity-60">3</span>
-              </button>
+              <div className="flex justify-center mt-6">
+                <Button size="lg" onClick={() => setShowAnswer(true)}>
+                  <Eye size={18} className="mr-2" /> 显示答案 <span className="ml-3 text-xs opacity-60">空格键</span>
+                </Button>
+              </div>
             </div>
-          </div>
-        )}
+
+            {/* 背面：答案 */}
+            <div
+              className="col-start-1 row-start-1"
+              style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+            >
+              <div className="bg-surface-soft rounded-lg p-3 mb-3 text-center">
+                <p className="text-sm text-muted">{renderContent(card.front)}</p>
+              </div>
+              <div className="bg-surface-card rounded-xl p-8 md:p-10 min-h-[160px] flex items-center justify-center border-2 border-primary/30">
+                <p className="text-xl md:text-2xl text-ink leading-relaxed text-center font-[450]">
+                  {card.type === 'cloze' ? renderContent(card.front, true) : card.back}
+                </p>
+              </div>
+
+              {cardHistory.length > 0 && (
+                <div className="mt-4">
+                  <button
+                    onClick={() => setShowHistory(v => !v)}
+                    className="flex items-center gap-1.5 text-xs text-muted hover:text-ink transition-colors"
+                  >
+                    <Clock size={12} />
+                    复习历史（{cardHistory.length}次）
+                    {masteryTrend && (
+                      <span className={`ml-1 font-medium ${masteryTrend.color}`}>{masteryTrend.text}</span>
+                    )}
+                  </button>
+                  {showHistory && (
+                    <div className="mt-2 p-3 rounded-lg bg-surface-soft border border-hairline">
+                      <div className="flex flex-wrap gap-1.5">
+                        {[...cardHistory].reverse().map((log) => (
+                          <span
+                            key={log.id}
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium ${ratingBg[log.rating]}`}
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full ${ratingColor[log.rating]}`} />
+                            {ratingLabel[log.rating]}
+                          </span>
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-muted-soft mt-1.5">
+                        最近一次：{formatDistanceToNow(cardHistory[0].reviewedAt, { addSuffix: true, locale: zhCN })}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex justify-center gap-3 mt-5">
+                <Button variant="danger" onClick={() => onRate('forgot')}>
+                  <RotateCcw size={16} className="mr-1.5" /> 生疏 <span className="ml-2 text-xs opacity-60">1</span>
+                </Button>
+                <button onClick={() => onRate('hard')}
+                  className="inline-flex items-center justify-center h-10 px-5 rounded-lg text-sm font-medium transition-all bg-[#d4a017] text-white hover:bg-[#b8890f] btn-press">
+                  <Zap size={16} className="mr-1.5" /> 一般 <span className="ml-2 text-xs opacity-60">2</span>
+                </button>
+                <button onClick={() => onRate('good')}
+                  className="inline-flex items-center justify-center h-10 px-5 rounded-lg text-sm font-medium transition-all bg-[#5db872] text-white hover:bg-[#4da362] btn-press">
+                  <Zap size={16} className="mr-1.5" /> 简单 <span className="ml-2 text-xs opacity-60">3</span>
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
       </div>
     </div>
   );
