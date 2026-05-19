@@ -203,13 +203,15 @@ const KnowledgeGraphPage: React.FC = () => {
 
       {/* 详情面板（移动端） */}
       {selectedCard && (
-        <div className="md:hidden fixed inset-x-0 bottom-0 z-50 bg-surface-card rounded-t-2xl border-t border-hairline shadow-xl max-h-[70vh] overflow-y-auto"
-          style={{ paddingBottom: '3.5rem' }}>
-          <div className="p-4">
-            <div className="w-8 h-1 rounded-full bg-hairline mx-auto mb-3" />
-            {renderCardDetail(selectedCard)}
+        <>
+          <div className="md:hidden fixed inset-0 z-40 bg-black/20" onClick={() => setSelectedCard(null)} />
+          <div className="md:hidden fixed inset-x-0 bottom-0 z-50 bg-surface-card rounded-t-2xl border-t border-hairline shadow-xl max-h-[70vh] overflow-y-auto">
+            <div className="p-4">
+              <div className="w-8 h-1 rounded-full bg-hairline mx-auto mb-3" />
+              {renderCardDetail(selectedCard)}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
