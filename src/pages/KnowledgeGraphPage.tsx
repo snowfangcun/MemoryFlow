@@ -13,6 +13,7 @@ const KnowledgeGraphPage: React.FC = () => {
   const [selectedNotebookId, setSelectedNotebookId] = useState<string | null>(null);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [drawerReady, setDrawerReady] = useState(false);
 
   const filteredCards = useMemo(() => {
     let result = selectedNotebookId ? cards.filter(c => c.notebookId === selectedNotebookId) : cards;
@@ -41,6 +42,7 @@ const KnowledgeGraphPage: React.FC = () => {
     if (selectedCard) {
       document.body.style.overflow = 'hidden';
       drawerRef.current?.focus();
+      setDrawerReady(false);
     }
     return () => {
       document.body.style.overflow = '';
@@ -259,12 +261,13 @@ const KnowledgeGraphPage: React.FC = () => {
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
                 transition={{ type: 'spring', damping: 28, stiffness: 300, mass: 0.8 }}
-                drag="y"
+                drag={drawerReady ? 'y' : false}
                 dragConstraints={{ top: 0, bottom: 200 }}
                 dragElastic={{ top: 0, bottom: 0.4 }}
                 onDragEnd={(_, info) => {
                   if (info.offset.y > 80) setSelectedCard(null);
                 }}
+                onAnimationComplete={() => setDrawerReady(true)}
               >
                 <div className="p-4">
                   <div className="w-8 h-1 rounded-full bg-hairline mx-auto mb-3" />
