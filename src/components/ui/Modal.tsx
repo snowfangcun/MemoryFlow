@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import Button from './Button';
 
@@ -18,7 +19,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer 
   }, [isOpen]);
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50" onClick={onClose}>
       <div className="fixed inset-0 bg-black/20" />
       <div className="fixed inset-0 flex items-center justify-center p-4 pointer-events-none">
@@ -35,7 +36,8 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer 
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
