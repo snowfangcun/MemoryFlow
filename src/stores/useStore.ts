@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { nanoid } from 'nanoid';
 import type { Notebook, Folder, Card, CardLink, ReviewLog, Settings, Rating } from '../types';
+import { getExpGainedForReview, getRankByExp } from '../types';
 
 const STORAGE_KEY = 'memoryflow_store';
 
@@ -50,7 +51,7 @@ interface AppStore {
 }
 
 const defaultSettings: Settings = {
-  dailyGoal: 20, theme: 'dark', lastStudyDate: '', streakDays: 0, totalStudyDays: 0,
+  dailyGoal: 20, theme: 'dark', lastStudyDate: '', streakDays: 0, totalStudyDays: 0, exp: 0, level: 1,
 };
 
 // ── 工具函数 ──
@@ -202,6 +203,10 @@ export const useStore = create<AppStore>()(
         else if (!settings.lastStudyDate) { newSettings.streakDays = 1; newSettings.totalStudyDays = 1; }
         else { newSettings.streakDays = 1; newSettings.totalStudyDays = settings.totalStudyDays + 1; }
         newSettings.lastStudyDate = todayStr;
+        const expGained = getExpGainedForReview(rating);
+        newSettings.exp = settings.exp + expGained;
+        const newLevel = getRankByExp(newSettings.exp).level;
+        newSettings.level = newLevel;
         set(s => ({ cards: s.cards.map(c => c.id === cardId ? { ...c, interval, nextReview, easeFactor: newEF, reviewCount: c.reviewCount + 1, updatedAt: Date.now() } : c), reviewLogs: [...s.reviewLogs, reviewLog], settings: newSettings }));
       },
       getDueCards: () => get().cards.filter(c => c.nextReview <= Date.now()),

@@ -1,5 +1,7 @@
 import React from 'react';
-import { BookMarked, BarChart3, Brain, Sparkles, Settings } from 'lucide-react';
+import { BookMarked, BarChart3, Brain, Sparkles, Settings, GraduationCap } from 'lucide-react';
+import { useStore } from '../../stores/useStore';
+import { getRankByLevel } from '../../types';
 
 interface HeaderProps {
   activeTab: string;
@@ -8,6 +10,8 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, dueCount }) => {
+  const { settings } = useStore();
+  const rank = getRankByLevel(settings.level);
   const tabs = [
     { id: 'home', label: '首页', icon: Brain },
     { id: 'notebooks', label: '学习本', icon: BookMarked },
@@ -24,6 +28,10 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, dueCount }) => 
               <Sparkles size={16} className="text-on-primary" />
             </div>
             <span className="heading-serif text-xl font-medium text-ink">MemoryFlow</span>
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-surface-soft border border-hairline">
+              <GraduationCap size={13} className="text-primary" />
+              <span className="text-xs font-medium text-muted">{rank.title}</span>
+            </div>
           </div>
 
           <nav className="flex items-center gap-1 bg-surface-soft rounded-xl p-0.5">
