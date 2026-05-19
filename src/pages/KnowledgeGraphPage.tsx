@@ -238,45 +238,38 @@ const KnowledgeGraphPage: React.FC = () => {
       </div>
 
       {/* 详情面板（移动端 - Portal） */}
-      {createPortal(
-        <AnimatePresence>
-          {selectedCard && (
-            <>
-              <motion.div
-                key="mobile-backdrop"
-                className="md:hidden fixed inset-0 z-[70] bg-black/20"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                onClick={() => setSelectedCard(null)}
-              />
-              <motion.div
-                key="mobile-drawer"
-                ref={drawerRef}
-                tabIndex={-1}
-                className="md:hidden fixed inset-x-0 bottom-0 z-[70] bg-surface-card rounded-t-2xl border-t border-hairline shadow-xl max-h-[70vh] overflow-y-auto outline-none"
-                style={{ minHeight: 200, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-                initial={{ y: '100%' }}
-                animate={{ y: 0 }}
-                exit={{ y: '100%' }}
-                transition={{ type: 'spring', damping: 28, stiffness: 300, mass: 0.8 }}
-                drag={drawerReady ? 'y' : false}
-                dragConstraints={{ top: 0, bottom: 200 }}
-                dragElastic={{ top: 0, bottom: 0.4 }}
-                onDragEnd={(_, info) => {
-                  if (info.offset.y > 80) setSelectedCard(null);
-                }}
-                onAnimationComplete={() => setDrawerReady(true)}
-              >
-                <div className="p-4">
-                  <div className="w-8 h-1 rounded-full bg-hairline mx-auto mb-3" />
-                  {renderCardDetail(selectedCard)}
-                </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>,
+      {selectedCard && createPortal(
+        <>
+          <motion.div
+            className="md:hidden fixed inset-0 z-[70] bg-black/20"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setSelectedCard(null)}
+          />
+          <motion.div
+            ref={drawerRef}
+            tabIndex={-1}
+            className="md:hidden fixed inset-x-0 bottom-0 z-[70] bg-surface-card rounded-t-2xl border-t border-hairline shadow-xl max-h-[70vh] overflow-y-auto outline-none"
+            style={{ minHeight: 200, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 28, stiffness: 300, mass: 0.8 }}
+            drag={drawerReady ? 'y' : false}
+            dragConstraints={{ top: 0, bottom: 200 }}
+            dragElastic={{ top: 0, bottom: 0.4 }}
+            onDragEnd={(_, info) => {
+              if (info.offset.y > 80) setSelectedCard(null);
+            }}
+            onAnimationComplete={() => setDrawerReady(true)}
+          >
+            <div className="p-4">
+              <div className="w-8 h-1 rounded-full bg-hairline mx-auto mb-3" />
+              {renderCardDetail(selectedCard)}
+            </div>
+          </motion.div>
+        </>,
         document.body
       )}
     </div>
