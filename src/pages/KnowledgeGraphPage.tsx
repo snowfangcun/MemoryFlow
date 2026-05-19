@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { GitBranch, HelpCircle, PenLine, ExternalLink, Link as LinkIcon, RotateCcw, Clock, X, Search, Filter } from 'lucide-react';
 import ForceGraph from '../components/ui/ForceGraph';
 import { useStore } from '../stores/useStore';
@@ -25,6 +25,7 @@ const KnowledgeGraphPage: React.FC = () => {
   }, [cards, selectedNotebookId, searchQuery]);
 
   const handleCardClick = useCallback((card: Card | null) => {
+    setDrawerReady(false);
     setSelectedCard(card);
   }, []);
 
@@ -42,7 +43,6 @@ const KnowledgeGraphPage: React.FC = () => {
     if (selectedCard) {
       document.body.style.overflow = 'hidden';
       drawerRef.current?.focus();
-      setDrawerReady(false);
     }
     return () => {
       document.body.style.overflow = '';
@@ -215,25 +215,21 @@ const KnowledgeGraphPage: React.FC = () => {
           </div>
 
           {/* 详情面板（桌面） */}
-          <AnimatePresence>
-            {selectedCard && (
-              <motion.div
-                key="desktop-panel"
-                className="hidden md:block w-80 shrink-0 overflow-y-auto"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className="bg-surface-card rounded-xl p-4 border border-hairline relative">
-                  <button onClick={() => setSelectedCard(null)} className="absolute top-3 right-3 p-1 rounded-lg hover:bg-surface-soft transition-colors z-10">
-                    <X size={16} className="text-muted" />
-                  </button>
-                  {renderCardDetail(selectedCard)}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {selectedCard && (
+            <motion.div
+              className="hidden md:block w-80 shrink-0 overflow-y-auto"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="bg-surface-card rounded-xl p-4 border border-hairline relative">
+                <button onClick={() => setSelectedCard(null)} className="absolute top-3 right-3 p-1 rounded-lg hover:bg-surface-soft transition-colors z-10">
+                  <X size={16} className="text-muted" />
+                </button>
+                {renderCardDetail(selectedCard)}
+              </div>
+            </motion.div>
+          )}
         </div>
       </div>
 
