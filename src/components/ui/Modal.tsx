@@ -20,7 +20,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/20" />
+      <div className="fixed inset-0 bg-black/20" />
       <div className="relative w-full max-w-md bg-canvas rounded-xl shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-hairline">
           <h2 className="text-base font-semibold text-ink">{title}</h2>
