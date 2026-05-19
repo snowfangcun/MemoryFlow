@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useMemo } from 'react';
-import { Play, Plus, Flame, BookOpen, Target, Clock, ArrowRight, ChevronRight } from 'lucide-react';
+import { Play, Plus, Flame, BookOpen, Target, GraduationCap, ArrowRight, ChevronRight } from 'lucide-react';
 import ProgressRing from '../components/ui/ProgressRing';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -8,6 +8,7 @@ import ReviewCard from '../components/cards/ReviewCard';
 import ReviewCompletion from '../components/ui/ReviewCompletion';
 import { useStore } from '../stores/useStore';
 import { useToastStore } from '../stores/useToastStore';
+import { getRankByLevel, getNextRank, getExpProgress } from '../types';
 import type { Rating } from '../types';
 
 const HomePage: React.FC = () => {
@@ -27,6 +28,9 @@ const HomePage: React.FC = () => {
   const dueCards = getDueCards();
   const todayStats = getTodayStats();
   const streak = getStreak();
+  const rank = getRankByLevel(settings.level);
+  const nextRank = getNextRank(settings.level);
+  const expProgress = getExpProgress(settings.exp, settings.level);
 
   const totalToday = todayStats.reviewedToday + dueCards.length;
   const progress = totalToday > 0 ? (todayStats.reviewedToday / totalToday) * 100 : 0;
@@ -132,14 +136,31 @@ const HomePage: React.FC = () => {
           { icon: Flame, value: streak, label: '连续打卡' },
           { icon: BookOpen, value: cards.length, label: '卡片总数' },
           { icon: Target, value: todayStats.reviewedToday, label: '今日已学' },
-          { icon: Clock, value: settings.totalStudyDays, label: '累计天数' },
+          { icon: GraduationCap, value: rank.title, label: '当前品阶', isRank: true },
         ].map((s, i) => (
           <div key={s.label} className={`bg-surface-card rounded-lg p-4 text-center ${i > 0 ? `enter enter-d${i}` : ''}`}>
-            <div className="w-9 h-9 rounded-lg bg-canvas flex items-center justify-center mx-auto mb-2">
-              <s.icon size={17} strokeWidth={1.5} className="text-muted" />
-            </div>
-            <div className="text-lg font-medium heading-serif text-ink">{s.value}</div>
-            <div className="text-xs text-muted">{s.label}</div>
+            {s.isRank ? (
+              <>
+                <div className="w-9 h-9 rounded-lg bg-canvas flex items-center justify-center mx-auto mb-2">
+                  <GraduationCap size={17} strokeWidth={1.5} className="text-primary" />
+                </div>
+                <div className="text-lg font-medium heading-serif text-ink">{s.value}</div>
+                <div className="text-xs text-muted mb-1.5">{s.label}</div>
+                {nextRank && (
+                  <div className="h-1 bg-hairline rounded-full overflow-hidden">
+                    <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${expProgress.progressPercent}%` }} />
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="w-9 h-9 rounded-lg bg-canvas flex items-center justify-center mx-auto mb-2">
+                  <s.icon size={17} strokeWidth={1.5} className="text-muted" />
+                </div>
+                <div className="text-lg font-medium heading-serif text-ink">{s.value}</div>
+                <div className="text-xs text-muted">{s.label}</div>
+              </>
+            )}
           </div>
         ))}
       </section>
