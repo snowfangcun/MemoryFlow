@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { GitBranch, HelpCircle, PenLine, ExternalLink, Link as LinkIcon, RotateCcw, Clock, X, Search, Filter } from 'lucide-react';
 import ForceGraph from '../components/ui/ForceGraph';
 import { useStore } from '../stores/useStore';
@@ -201,17 +202,18 @@ const KnowledgeGraphPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 详情面板（移动端） */}
-      {selectedCard && (
+      {/* 详情面板（移动端 - Portal） */}
+      {selectedCard && createPortal(
         <>
-          <div className="md:hidden fixed inset-0 z-40 bg-black/20" onClick={() => setSelectedCard(null)} />
-          <div className="md:hidden fixed inset-x-0 bottom-0 z-[60] bg-surface-card rounded-t-2xl border-t border-hairline shadow-xl max-h-[70vh] overflow-y-auto">
+          <div className="md:hidden fixed inset-0 z-[70] bg-black/20" onClick={() => setSelectedCard(null)} />
+          <div className="md:hidden fixed inset-x-0 bottom-0 z-[70] bg-surface-card rounded-t-2xl border-t border-hairline shadow-xl max-h-[70vh] overflow-y-auto">
             <div className="p-4">
               <div className="w-8 h-1 rounded-full bg-hairline mx-auto mb-3" />
               {renderCardDetail(selectedCard)}
             </div>
           </div>
-        </>
+        </>,
+        document.body
       )}
     </div>
   );
