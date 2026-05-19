@@ -16,7 +16,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, dueCount }) => 
   ];
 
   return (
-    <header className="sticky top-0 z-40 glass">
+    <header className="sticky top-0 z-40 bg-canvas/85 backdrop-blur-lg border-b border-hairline">
       <div className="max-w-5xl mx-auto px-5">
         <div className="flex items-center justify-between h-14">
           <div className="flex items-center gap-3">
