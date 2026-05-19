@@ -8,10 +8,12 @@ interface CardPreviewProps {
   card: Card;
   backlinks: CardLink[];
   forwardLinks: CardLink[];
-  onClick: () => void;
+  onClick?: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }
+
+const stripWikilinks = (text: string) => text.replace(/\[\[([^\]]+)\]\]/g, '$1');
 
 const CardPreview: React.FC<CardPreviewProps> = ({ card, backlinks, forwardLinks, onClick, onEdit, onDelete }) => {
   const isDue = card.nextReview <= Date.now();
@@ -19,7 +21,7 @@ const CardPreview: React.FC<CardPreviewProps> = ({ card, backlinks, forwardLinks
   const backlinkCount = backlinks.length;
 
   return (
-    <div className="relative bg-surface-card rounded-xl cursor-pointer group border border-transparent hover:border-hairline transition-all" onClick={onClick}>
+    <div onClick={onClick} className={`relative bg-surface-card rounded-xl group border border-transparent hover:border-hairline transition-all${onClick ? ' cursor-pointer' : ''}`}>
       <div className="p-4">
         {/* Top row */}
         <div className="flex items-start justify-between mb-2.5">
@@ -40,12 +42,12 @@ const CardPreview: React.FC<CardPreviewProps> = ({ card, backlinks, forwardLinks
 
         {/* Content */}
         <p className="text-sm text-body leading-relaxed line-clamp-2 mb-2">
-          {card.type === 'cloze' ? card.front.replace(/\{\{([^}]+)\}\}/g, '____') : card.front}
+          {card.type === 'cloze' ? stripWikilinks(card.front.replace(/\{\{([^}]+)\}\}/g, '____')) : stripWikilinks(card.front)}
         </p>
         <p className="text-xs text-muted-soft line-clamp-1 mb-3">
           {card.type === 'cloze'
             ? `${card.front.match(/\{\{([^}]+)\}\}/g)?.length || 0} 处填空`
-            : card.back.length > 50 ? card.back.slice(0, 50) + '...' : card.back
+            : stripWikilinks(card.back.length > 50 ? card.back.slice(0, 50) + '...' : card.back)
           }
         </p>
 

@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useRef } from 'react';
-import { Play, Plus, Flame, BookOpen, Target, Clock, ArrowRight } from 'lucide-react';
+import React, { useState, useCallback, useRef, useMemo } from 'react';
+import { Play, Plus, Flame, BookOpen, Target, Clock, ArrowRight, ChevronRight } from 'lucide-react';
 import ProgressRing from '../components/ui/ProgressRing';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -11,7 +11,7 @@ import { useToastStore } from '../stores/useToastStore';
 import type { Rating } from '../types';
 
 const HomePage: React.FC = () => {
-  const { notebooks, cards, getDueCards, getTodayStats, getStreak, reviewCard, addNotebook, settings } = useStore();
+  const { notebooks, folders, cards, getDueCards, getTodayStats, getStreak, reviewCard, addNotebook, settings } = useStore();
   const addToast = useToastStore(s => s.addToast);
   const [isReviewing, setIsReviewing] = useState(false);
   const [showCompletion, setShowCompletion] = useState(false);
@@ -147,19 +147,41 @@ const HomePage: React.FC = () => {
       {dueNotebooks.length > 0 && (
         <section>
           <h3 className="text-sm font-semibold text-ink mb-3">待复习学习本</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {dueNotebooks.map(nb => (
-              <div key={nb.id} className="bg-surface-card rounded-lg px-4 py-3.5 flex items-center justify-between hover-lift">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg" style={{ background: nb.color }} />
-                  <div>
-                    <div className="text-sm font-medium text-ink">{nb.name}</div>
-                    <div className="text-xs text-muted">{nb.dueCount} 待复习</div>
+          <div className="space-y-3">
+            {dueNotebooks.map(nb => {
+              const nbFolders = folders.filter(f => f.notebookId === nb.id);
+              return (
+                <div key={nb.id} className="bg-surface-card rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg" style={{ background: nb.color }} />
+                      <div>
+                        <div className="text-sm font-medium text-ink">{nb.name}</div>
+                        <div className="text-xs text-muted">{nb.dueCount} 待复习</div>
+                      </div>
+                    </div>
+                    <ArrowRight size={16} className="text-muted-soft" />
                   </div>
+                  {nbFolders.length > 0 && (
+                    <div className="ml-11 space-y-1 mt-1">
+                      {nbFolders.map(f => {
+                        const dueCount = cards.filter(c => c.folderId === f.id && c.nextReview <= Date.now()).length;
+                        if (dueCount === 0) return null;
+                        return (
+                          <div key={f.id} className="flex items-center justify-between py-1 px-2 rounded-lg hover:bg-canvas transition-colors cursor-pointer">
+                            <div className="flex items-center gap-2">
+                              <ChevronRight size={12} className="text-muted-soft" />
+                              <span className="text-xs text-muted">{f.name}</span>
+                            </div>
+                            <span className="text-xs text-muted">{dueCount} 待复习</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-                <ArrowRight size={16} className="text-muted-soft" />
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}

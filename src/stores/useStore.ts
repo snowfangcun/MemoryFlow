@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { nanoid } from 'nanoid';
-import type { Notebook, Card, CardLink, ReviewLog, Settings, Rating } from '../types';
+import type { Notebook, Folder, Card, CardLink, ReviewLog, Settings, Rating } from '../types';
 
 const STORAGE_KEY = 'memoryflow_store';
 
 interface AppStore {
   notebooks: Notebook[];
+  folders: Folder[];
   cards: Card[];
   cardLinks: CardLink[];
   reviewLogs: ReviewLog[];
@@ -16,11 +17,18 @@ interface AppStore {
   updateNotebook: (id: string, updates: Partial<Notebook>) => void;
   deleteNotebook: (id: string) => void;
 
-  addCard: (notebookId: string, type: 'question' | 'cloze', front: string, back: string, tags?: string[]) => Card;
+  // Folder CRUD
+  addFolder: (notebookId: string, name: string, parentFolderId?: string | null) => Folder;
+  updateFolder: (id: string, updates: Partial<Folder>) => void;
+  deleteFolder: (id: string) => void;
+  getFolderTree: (notebookId: string) => Folder[];
+  getChildFolders: (folderId: string) => Folder[];
+  getCardsByFolder: (folderId: string) => Card[];
+
+  addCard: (notebookId: string, type: 'question' | 'cloze', front: string, back: string, tags?: string[], folderId?: string) => Card;
   updateCard: (id: string, updates: Partial<Card>) => void;
   deleteCard: (id: string) => void;
 
-  /** 手动刷新卡片的 [[链接]] */
   refreshCardLinks: (cardId: string) => void;
 
   reviewCard: (cardId: string, rating: Rating) => void;
@@ -97,6 +105,7 @@ export const useStore = create<AppStore>()(
   persist(
     (set, get) => ({
       notebooks: [],
+      folders: [],
       cards: [],
       cardLinks: [],
       reviewLogs: [],
@@ -114,11 +123,33 @@ export const useStore = create<AppStore>()(
         return notebook;
       },
       updateNotebook: (id, updates) => set(s => ({ notebooks: s.notebooks.map(n => n.id === id ? { ...n, ...updates, updatedAt: Date.now() } : n) })),
-      deleteNotebook: (id) => set(s => ({ notebooks: s.notebooks.filter(n => n.id !== id), cards: s.cards.filter(c => c.notebookId !== id), cardLinks: s.cardLinks.filter(l => l.sourceId !== id && l.targetId !== id) })),
+      deleteNotebook: (id) => set(s => ({ notebooks: s.notebooks.filter(n => n.id !== id), folders: s.folders.filter(f => f.notebookId !== id), cards: s.cards.filter(c => c.notebookId !== id), cardLinks: s.cardLinks.filter(l => l.sourceId !== id && l.targetId !== id) })),
+
+      // Folders
+      addFolder: (notebookId, name, parentFolderId) => {
+        const folder: Folder = { id: nanoid(), notebookId, name, parentFolderId: parentFolderId ?? null, createdAt: Date.now(), updatedAt: Date.now() };
+        set(s => ({ folders: [...s.folders, folder] }));
+        return folder;
+      },
+      updateFolder: (id, updates) => set(s => ({ folders: s.folders.map(f => f.id === id ? { ...f, ...updates, updatedAt: Date.now() } : f) })),
+      deleteFolder: (id) => set(s => {
+        // 级联删除子文件夹 + 移出卡片到未分类
+        const idsToDelete = new Set<string>([id]);
+        const children = (parentId: string) => s.folders.filter(f => f.parentFolderId === parentId);
+        const collect = (parentId: string) => { children(parentId).forEach(c => { idsToDelete.add(c.id); collect(c.id); }); };
+        collect(id);
+        return {
+          folders: s.folders.filter(f => !idsToDelete.has(f.id)),
+          cards: s.cards.map(c => idsToDelete.has(c.folderId || '') ? { ...c, folderId: undefined } : c),
+        };
+      }),
+      getFolderTree: (notebookId) => get().folders.filter(f => f.notebookId === notebookId),
+      getChildFolders: (folderId) => get().folders.filter(f => f.parentFolderId === folderId),
+      getCardsByFolder: (folderId) => get().cards.filter(c => c.folderId === folderId),
 
       // Cards
-      addCard: (notebookId, type, front, back, tags) => {
-        const card: Card = { id: nanoid(), notebookId, type, front, back, interval: 1, nextReview: Date.now(), reviewCount: 0, easeFactor: 2.5, tags: tags || [], createdAt: Date.now(), updatedAt: Date.now() };
+      addCard: (notebookId, type, front, back, tags, folderId) => {
+        const card: Card = { id: nanoid(), notebookId, folderId, type, front, back, interval: 1, nextReview: Date.now(), reviewCount: 0, easeFactor: 2.5, tags: tags || [], createdAt: Date.now(), updatedAt: Date.now() };
         set(s => {
           const newLinks = parseAndUpdateLinks(card.id, front, back, [...s.cards, card], s.cardLinks);
           return { cards: [...s.cards, card], cardLinks: [...s.cardLinks, ...newLinks] };
@@ -197,14 +228,14 @@ export const useStore = create<AppStore>()(
       updateSettings: (updates) => set(s => ({ settings: { ...s.settings, ...updates } })),
 
       exportData: () => {
-        const { notebooks, cards, reviewLogs, settings, cardLinks } = get();
-        return JSON.stringify({ version: 1, notebooks, cards, cardLinks, reviewLogs, settings }, null, 2);
+        const { notebooks, folders, cards, reviewLogs, settings, cardLinks } = get();
+        return JSON.stringify({ version: 2, notebooks, folders, cards, cardLinks, reviewLogs, settings }, null, 2);
       },
       importData: (json) => {
         try {
           const data = JSON.parse(json);
           if (!data.notebooks || !data.cards || !data.reviewLogs || !data.settings) return '数据格式不正确';
-          set({ notebooks: data.notebooks, cards: data.cards, cardLinks: data.cardLinks || [], reviewLogs: data.reviewLogs, settings: data.settings });
+          set({ notebooks: data.notebooks, folders: data.folders || [], cards: data.cards, cardLinks: data.cardLinks || [], reviewLogs: data.reviewLogs, settings: data.settings });
           return null;
         } catch { return 'JSON 解析失败'; }
       },
