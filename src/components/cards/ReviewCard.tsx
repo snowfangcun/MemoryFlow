@@ -1,8 +1,11 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Eye, RotateCcw, Zap } from 'lucide-react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
+import { Eye, RotateCcw, Zap, Clock } from 'lucide-react';
 import Button from '../ui/Button';
 import { ConfirmModal } from '../ui/Modal';
+import { useStore } from '../../stores/useStore';
 import type { Card, Rating } from '../../types';
+import { formatDistanceToNow } from 'date-fns';
+import { zhCN } from 'date-fns/locale';
 
 interface ReviewCardProps {
   card: Card;
@@ -12,14 +15,37 @@ interface ReviewCardProps {
   total: number;
 }
 
+const ratingLabel: Record<Rating, string> = { forgot: '生疏', hard: '一般', good: '简单' };
+const ratingColor: Record<Rating, string> = { forgot: 'bg-danger', hard: 'bg-[#d4a017]', good: 'bg-success' };
+const ratingBg: Record<Rating, string> = { forgot: 'bg-danger/15 text-danger', hard: 'bg-amber-50 text-[#d4a017] dark:bg-amber-900/20', good: 'bg-success/15 text-success' };
+
 const ReviewCard: React.FC<ReviewCardProps> = ({ card, onRate, onExit, currentIndex, total }) => {
   const [showAnswer, setShowAnswer] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
-  // 使用 ref 存储最新的 onRate，避免 useEffect 反复绑定/解绑事件
+  const [showHistory, setShowHistory] = useState(false);
   const onRateRef = useRef(onRate);
   onRateRef.current = onRate;
 
-  useEffect(() => { setShowAnswer(false); }, [card.id]);
+  const { reviewLogs } = useStore();
+
+  const cardHistory = useMemo(() => {
+    return reviewLogs
+      .filter(l => l.cardId === card.id)
+      .sort((a, b) => b.reviewedAt - a.reviewedAt)
+      .slice(0, 8);
+  }, [reviewLogs, card.id]);
+
+  const masteryTrend = useMemo(() => {
+    if (cardHistory.length < 2) return null;
+    const recent = cardHistory.slice(0, Math.min(3, cardHistory.length));
+    const goodCount = recent.filter(r => r.rating === 'good').length;
+    if (goodCount >= 2) return { text: '趋势向好', color: 'text-success' };
+    const forgotCount = recent.filter(r => r.rating === 'forgot').length;
+    if (forgotCount >= 2) return { text: '需要巩固', color: 'text-danger' };
+    return { text: '趋于稳定', color: 'text-muted' };
+  }, [cardHistory]);
+
+  useEffect(() => { setShowAnswer(false); setShowHistory(false); }, [card.id]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -32,7 +58,7 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ card, onRate, onExit, currentIn
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showAnswer, card.id]); // 不再依赖 onRate
+  }, [showAnswer, card.id]);
 
   const renderContent = (content: string, showAns = false) => {
     if (card.type === 'cloze') {
@@ -57,7 +83,6 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ card, onRate, onExit, currentIn
 
   return (
     <div className="min-h-screen bg-canvas flex flex-col">
-      {/* 退出确认弹窗 */}
       <ConfirmModal
         isOpen={showExitConfirm}
         onClose={() => setShowExitConfirm(false)}
@@ -102,7 +127,42 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ card, onRate, onExit, currentIn
                 {card.type === 'cloze' ? renderContent(card.front, true) : card.back}
               </p>
             </div>
-            <div className="flex justify-center gap-3 mt-6 enter enter-d1">
+
+            {/* 复习历史 */}
+            {cardHistory.length > 0 && (
+              <div className="mt-4 max-w-xl mx-auto w-full">
+                <button
+                  onClick={() => setShowHistory(v => !v)}
+                  className="flex items-center gap-1.5 text-xs text-muted hover:text-ink transition-colors"
+                >
+                  <Clock size={12} />
+                  复习历史（{cardHistory.length}次）
+                  {masteryTrend && (
+                    <span className={`ml-1 font-medium ${masteryTrend.color}`}>{masteryTrend.text}</span>
+                  )}
+                </button>
+                {showHistory && (
+                  <div className="mt-2 p-3 rounded-lg bg-surface-soft border border-hairline enter">
+                    <div className="flex flex-wrap gap-1.5">
+                      {[...cardHistory].reverse().map((log, i) => (
+                        <span
+                          key={log.id}
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium ${ratingBg[log.rating]}`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${ratingColor[log.rating]}`} />
+                          {ratingLabel[log.rating]}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-muted-soft mt-1.5">
+                      最近一次：{formatDistanceToNow(cardHistory[0].reviewedAt, { addSuffix: true, locale: zhCN })}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex justify-center gap-3 mt-5 enter enter-d1">
               <Button variant="danger" onClick={() => onRate('forgot')}>
                 <RotateCcw size={16} className="mr-1.5" /> 生疏 <span className="ml-2 text-xs opacity-60">1</span>
               </Button>

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useMemo } from 'react';
-import { Play, Plus, Flame, BookOpen, Target, GraduationCap, ArrowRight, ChevronRight } from 'lucide-react';
+import { Play, Plus, Flame, BookOpen, Target, GraduationCap, ArrowRight, ChevronRight, RotateCcw } from 'lucide-react';
 import ProgressRing from '../components/ui/ProgressRing';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -25,6 +25,10 @@ const HomePage: React.FC<HomePageProps> = ({ onReviewChange }) => {
   const [newNbName, setNewNbName] = useState('');
   const [newNbDesc, setNewNbDesc] = useState('');
 
+  // 错题重练
+  const [isRetrySession, setIsRetrySession] = useState(false);
+  const [retryCardIds, setRetryCardIds] = useState<string[]>([]);
+
   // 收集本次复习的评级用于完成页
   const ratingsRef = useRef<Rating[]>([]);
   const [reviewRatings, setReviewRatings] = useState<Rating[]>([]);
@@ -36,24 +40,80 @@ const HomePage: React.FC<HomePageProps> = ({ onReviewChange }) => {
   const nextRank = getNextRank(settings.level);
   const expProgress = getExpProgress(settings.exp, settings.level);
 
+  const retryCards = useMemo(
+    () => cards.filter(c => retryCardIds.includes(c.id)),
+    [cards, retryCardIds]
+  );
+
   const totalToday = todayStats.reviewedToday + dueCards.length;
   const progress = totalToday > 0 ? (todayStats.reviewedToday / totalToday) * 100 : 0;
 
+  const endReview = useCallback((ratings: Rating[]) => {
+    setReviewRatings(ratings);
+    ratingsRef.current = [];
+    setIsReviewing(false);
+    setCurrentCardIndex(0);
+    setShowCompletion(true);
+  }, []);
+
   const handleRate = useCallback((rating: Rating) => {
-    if (dueCards[currentCardIndex]) {
-      reviewCard(dueCards[currentCardIndex].id, rating);
+    if (isRetrySession) {
+      const currentCard = retryCards[currentCardIndex];
+      if (!currentCard) return;
+      reviewCard(currentCard.id, rating);
+      ratingsRef.current = [...ratingsRef.current, rating];
+      if (rating === 'good' || rating === 'hard') {
+        const newRetry = retryCardIds.filter(id => id !== currentCard.id);
+        if (newRetry.length === 0) {
+          endReview(ratingsRef.current);
+          setIsRetrySession(false);
+          setRetryCardIds([]);
+        } else {
+          setRetryCardIds(newRetry);
+          setCurrentCardIndex(0);
+        }
+      } else {
+        if (currentCardIndex < retryCards.length - 1) {
+          setCurrentCardIndex(p => p + 1);
+        } else {
+          setCurrentCardIndex(0);
+        }
+      }
+    } else {
+      const currentCard = dueCards[currentCardIndex];
+      if (!currentCard) return;
+      reviewCard(currentCard.id, rating);
       ratingsRef.current = [...ratingsRef.current, rating];
       if (currentCardIndex < dueCards.length - 1) {
         setCurrentCardIndex(p => p + 1);
       } else {
-        setReviewRatings(ratingsRef.current);
-        ratingsRef.current = [];
-        setIsReviewing(false);
-        setShowCompletion(true);
-        setCurrentCardIndex(0);
+        const forgottenIds = dueCards
+          .filter((_, i) => ratingsRef.current[i] === 'forgot')
+          .map(c => c.id);
+        if (forgottenIds.length > 0) {
+          setReviewRatings([]);
+          ratingsRef.current = [];
+          setRetryCardIds(forgottenIds);
+          setIsRetrySession(true);
+          setCurrentCardIndex(0);
+        } else {
+          endReview(ratingsRef.current);
+        }
       }
     }
-  }, [dueCards, currentCardIndex, reviewCard]);
+  }, [dueCards, retryCards, currentCardIndex, reviewCard, isRetrySession, retryCardIds, endReview]);
+
+  const exitReview = useCallback(() => {
+    if (ratingsRef.current.length > 0) {
+      addToast(`已复习 ${ratingsRef.current.length} 张，进度已保存`, 'info');
+      ratingsRef.current = [];
+    }
+    setIsReviewing(false);
+    setIsRetrySession(false);
+    setRetryCardIds([]);
+    setCurrentCardIndex(0);
+    onReviewChange?.(false);
+  }, [addToast, onReviewChange]);
 
   const handleCreateNotebook = () => {
     if (newNbName.trim()) {
@@ -77,24 +137,31 @@ const HomePage: React.FC<HomePageProps> = ({ onReviewChange }) => {
   }
 
   // 复习模式
-  if (isReviewing && dueCards.length > 0) {
-    return (
-      <ReviewCard
-        card={dueCards[currentCardIndex]}
-        onRate={handleRate}
-        onExit={() => {
-          if (ratingsRef.current.length > 0) {
-            addToast(`已复习 ${ratingsRef.current.length} 张，进度已保存`, 'info');
-            ratingsRef.current = [];
-          }
-          setIsReviewing(false);
-          setCurrentCardIndex(0);
-          onReviewChange?.(false);
-        }}
-        currentIndex={currentCardIndex}
-        total={dueCards.length}
-      />
-    );
+  if (isReviewing) {
+    const cardsToReview = isRetrySession ? retryCards : dueCards;
+    if (cardsToReview.length > 0) {
+      return (
+        <>
+          {isRetrySession && (
+            <div className="bg-danger/10 border-b border-danger/20 px-5 py-2 flex items-center justify-center gap-2">
+              <RotateCcw size={13} className="text-danger" />
+              <span className="text-xs font-medium text-danger">
+                错题重练 · 还有 {retryCards.length} 张待巩固
+              </span>
+            </div>
+          )}
+          <ReviewCard
+            card={cardsToReview[currentCardIndex]}
+            onRate={handleRate}
+            onExit={exitReview}
+            currentIndex={currentCardIndex}
+            total={cardsToReview.length}
+          />
+        </>
+      );
+    }
+    // 理论上不会到这里，但如果 cardsToReview 为空则回到首页
+    exitReview();
   }
 
   const dueNotebooks = notebooks.map(n => ({
