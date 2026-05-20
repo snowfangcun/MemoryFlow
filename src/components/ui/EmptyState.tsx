@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { BookOpen, Plus, Sparkles } from 'lucide-react';
 import Button from './Button';
 
@@ -11,25 +12,67 @@ interface EmptyStateProps {
 
 const icons = { book: BookOpen, card: Plus, review: Sparkles };
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1, delayChildren: 0.05 },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.35, ease: [0.25, 0.1, 0.25, 1] as const },
+  },
+};
+
 const EmptyState: React.FC<EmptyStateProps> = ({ icon = 'book', title, description, action }) => {
   const Icon = icons[icon];
 
   return (
-    <div className="flex flex-col items-center py-24 px-8 text-center">
-      <div className="w-20 h-20 rounded-xl bg-surface-soft flex items-center justify-center mb-5">
+    <motion.div
+      className="flex flex-col items-center py-24 px-8 text-center"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
+      <motion.div
+        className="w-20 h-20 rounded-xl bg-surface-soft flex items-center justify-center mb-5"
+        variants={itemVariants}
+        animate={{
+          y: [0, -4, 0],
+        }}
+        transition={{
+          y: {
+            duration: 3,
+            repeat: Infinity,
+            ease: 'easeInOut' as const,
+            delay: 0.6,
+          },
+        }}
+      >
         <Icon size={34} strokeWidth={1.5} className="text-muted" />
-      </div>
-      <h3 className="heading-serif text-xl text-ink mb-1.5">{title}</h3>
-      <p className="text-sm text-muted max-w-xs mb-6">{description}</p>
+      </motion.div>
+      <motion.h3 className="heading-serif text-xl text-ink mb-1.5" variants={itemVariants}>
+        {title}
+      </motion.h3>
+      <motion.p className="text-sm text-muted max-w-xs mb-6" variants={itemVariants}>
+        {description}
+      </motion.p>
       {action && (
-        <Button onClick={action.onClick}>
-          {icon === 'review' ? <Sparkles size={16} className="mr-1.5" /> :
-           icon === 'card' ? <Plus size={16} className="mr-1.5" /> :
-           <BookOpen size={16} className="mr-1.5" />}
-          {action.label}
-        </Button>
+        <motion.div variants={itemVariants}>
+          <Button onClick={action.onClick}>
+            {icon === 'review' ? <Sparkles size={16} className="mr-1.5" /> :
+             icon === 'card' ? <Plus size={16} className="mr-1.5" /> :
+             <BookOpen size={16} className="mr-1.5" />}
+            {action.label}
+          </Button>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 };
 
