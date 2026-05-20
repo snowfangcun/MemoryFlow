@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Flame, Trophy, Target, TrendingUp, Clock, CheckCircle, GraduationCap, ChevronRight } from 'lucide-react';
 import HeatmapCalendar from '../components/ui/HeatmapCalendar';
+import EmptyState from '../components/ui/EmptyState';
 import { useStore } from '../stores/useStore';
 import { MASTERED_INTERVAL_MS, getRankByLevel, getNextRank, getExpProgress } from '../types';
 
@@ -104,7 +105,8 @@ const StatsPage: React.FC = () => {
       <section className="bg-surface-card rounded-xl p-5">
         <h3 className="text-sm font-semibold text-ink mb-4">学习本详情</h3>
         {stats.notebookStats.length === 0 ? (
-          <p className="text-sm text-muted text-center py-6">还没有学习本</p>
+          <EmptyState icon="book" title="还没有学习本" description="创建学习本后，这里会展示每个学习本的学习进度"
+            action={{ label: '去创建学习本', onClick: () => { /* 引导到学习本页 */ } }} />
         ) : (
           <div className="space-y-3">
             {stats.notebookStats.map(nb => {

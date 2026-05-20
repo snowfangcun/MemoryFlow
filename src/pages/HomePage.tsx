@@ -6,6 +6,7 @@ import Modal from '../components/ui/Modal';
 import { Input, Textarea } from '../components/ui/Input';
 import ReviewCard from '../components/cards/ReviewCard';
 import ReviewCompletion from '../components/ui/ReviewCompletion';
+import EmptyState from '../components/ui/EmptyState';
 import { useStore } from '../stores/useStore';
 import { useToastStore } from '../stores/useToastStore';
 import { getRankByLevel, getNextRank, getExpProgress } from '../types';
@@ -234,6 +235,13 @@ const HomePage: React.FC<HomePageProps> = ({ onReviewChange }) => {
           </div>
         ))}
       </section>
+
+      {notebooks.length === 0 && (
+        <section className="mb-6">
+          <EmptyState icon="book" title="开始你的学习之旅" description="创建一个学习本，然后添加卡片开始记忆"
+            action={{ label: '新建学习本', onClick: () => { setNewNbName(''); setNewNbDesc(''); setShowNewNotebookModal(true); } }} />
+        </section>
+      )}
 
       {dueNotebooks.length > 0 && (
         <section>

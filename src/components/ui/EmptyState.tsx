@@ -1,16 +1,16 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { BookOpen, Plus, Sparkles } from 'lucide-react';
+import { BookOpen, Plus, Sparkles, BarChart3, FolderOpen, GitBranch } from 'lucide-react';
 import Button from './Button';
 
 interface EmptyStateProps {
-  icon?: 'book' | 'card' | 'review';
+  icon?: 'book' | 'card' | 'review' | 'stats' | 'folder' | 'graph';
   title: string;
   description: string;
   action?: { label: string; onClick: () => void };
 }
 
-const icons = { book: BookOpen, card: Plus, review: Sparkles };
+const icons = { book: BookOpen, card: Plus, review: Sparkles, stats: BarChart3, folder: FolderOpen, graph: GitBranch };
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -67,6 +67,9 @@ const EmptyState: React.FC<EmptyStateProps> = ({ icon = 'book', title, descripti
           <Button onClick={action.onClick}>
             {icon === 'review' ? <Sparkles size={16} className="mr-1.5" /> :
              icon === 'card' ? <Plus size={16} className="mr-1.5" /> :
+             icon === 'graph' ? <GitBranch size={16} className="mr-1.5" /> :
+             icon === 'folder' ? <FolderOpen size={16} className="mr-1.5" /> :
+             icon === 'stats' ? <BarChart3 size={16} className="mr-1.5" /> :
              <BookOpen size={16} className="mr-1.5" />}
             {action.label}
           </Button>

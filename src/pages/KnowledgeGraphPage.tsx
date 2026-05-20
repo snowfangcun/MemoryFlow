@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { GitBranch, HelpCircle, PenLine, ExternalLink, Link as LinkIcon, RotateCcw, Clock, Search, Filter } from 'lucide-react';
+import { GitBranch, HelpCircle, PenLine, ExternalLink, Link as LinkIcon, RotateCcw, Clock, Search, Filter, Plus } from 'lucide-react';
 import ForceGraph from '../components/ui/ForceGraph';
 import Modal from '../components/ui/Modal';
+import EmptyState from '../components/ui/EmptyState';
 import { useStore } from '../stores/useStore';
 import type { Card } from '../types';
 import { formatDistanceToNow } from 'date-fns';
@@ -172,16 +173,27 @@ const KnowledgeGraphPage: React.FC = () => {
       {/* 主体 */}
       <div className="flex-1 min-h-0 px-5 py-4">
         <div className="max-w-5xl mx-auto h-full">
-          <div className="h-full rounded-xl border border-hairline overflow-hidden bg-surface-soft/30">
-            <ForceGraph
-              cards={filteredCards}
-              cardLinks={cardLinks}
-              notebooks={notebooks}
-              selectedNotebookId={selectedNotebookId}
-              onCardClick={handleCardClick}
-              highlightCardId={selectedCard?.id || null}
-            />
-          </div>
+          {cards.length === 0 ? (
+            <div className="h-full rounded-xl border border-hairline overflow-hidden bg-surface-soft/30 flex items-center justify-center">
+              <EmptyState icon="graph" title="还没有卡片" description="创建学习本和卡片后，知识图谱会自动构建卡片之间的关联网络"
+                action={{ label: '去创建卡片', onClick: () => window.location.hash = '#notebooks' }} />
+            </div>
+          ) : filteredCards.length === 0 ? (
+            <div className="h-full rounded-xl border border-hairline overflow-hidden bg-surface-soft/30 flex items-center justify-center">
+              <EmptyState icon="graph" title="没有匹配的卡片" description="试试调整筛选条件或搜索词" />
+            </div>
+          ) : (
+            <div className="h-full rounded-xl border border-hairline overflow-hidden bg-surface-soft/30">
+              <ForceGraph
+                cards={filteredCards}
+                cardLinks={cardLinks}
+                notebooks={notebooks}
+                selectedNotebookId={selectedNotebookId}
+                onCardClick={handleCardClick}
+                highlightCardId={selectedCard?.id || null}
+              />
+            </div>
+          )}
         </div>
       </div>
 

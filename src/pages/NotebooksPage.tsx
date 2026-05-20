@@ -805,8 +805,8 @@ const NotebooksPage: React.FC = () => {
 
               {/* 空状态 */}
               {currentSubfolders.length === 0 && currentLevelCards.length === 0 && (
-                <div className="text-center py-8">
-                  <p className="text-sm text-muted">这里还没有内容</p>
+                <div className="py-4">
+                  <EmptyState icon="folder" title="这里还没有内容" description="新建文件夹对卡片分类，或直接添加卡片" />
                 </div>
               )}
 
