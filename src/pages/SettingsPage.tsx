@@ -167,7 +167,6 @@ const SettingsPage: React.FC = () => {
         message="此操作将清除所有学习本、卡片、复习记录和等级数据。此操作不可撤销，确定要继续吗？"
         confirmText="确认重置"
         cancelText="取消"
-        variant="danger"
       />
     </div>
   );

@@ -176,6 +176,26 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ card, onRate, onExit, currentIn
                 </div>
               )}
 
+              {/* 卡片元信息 */}
+              <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] text-muted-soft">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-soft border border-hairline">
+                  EF {card.easeFactor.toFixed(1)}
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-soft border border-hairline">
+                  已复习 {card.reviewCount} 次
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-soft border border-hairline">
+                  间隔 {card.interval >= 86400000
+                    ? `${Math.round(card.interval / 86400000)} 天`
+                    : card.interval >= 3600000
+                      ? `${Math.round(card.interval / 3600000)} 小时`
+                      : `${Math.round(card.interval / 60000)} 分钟`}
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-soft border border-hairline">
+                  下次 {formatDistanceToNow(card.nextReview, { addSuffix: true, locale: zhCN })}
+                </span>
+              </div>
+
               <div className="flex justify-center gap-3 mt-5">
                 <Button variant="danger" onClick={() => onRate('forgot')}>
                   <RotateCcw size={16} className="mr-1.5" /> 生疏 <span className="ml-2 text-xs opacity-60">1</span>

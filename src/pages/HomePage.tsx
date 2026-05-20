@@ -17,7 +17,7 @@ interface HomePageProps {
 }
 
 const HomePage: React.FC<HomePageProps> = ({ onReviewChange }) => {
-  const { notebooks, folders, cards, getDueCards, getTodayStats, getStreak, reviewCard, addNotebook, settings } = useStore();
+  const { notebooks, folders, cards, getDueCards, getDueStats, getTodayStats, getStreak, reviewCard, addNotebook, settings } = useStore();
   const addToast = useToastStore(s => s.addToast);
   const [isReviewing, setIsReviewing] = useState(false);
   const [showCompletion, setShowCompletion] = useState(false);
@@ -35,6 +35,7 @@ const HomePage: React.FC<HomePageProps> = ({ onReviewChange }) => {
   const [reviewRatings, setReviewRatings] = useState<Rating[]>([]);
 
   const dueCards = getDueCards();
+  const dueStats = getDueStats();
   const todayStats = getTodayStats();
   const streak = getStreak();
   const rank = getRankByLevel(settings.level);
@@ -46,7 +47,7 @@ const HomePage: React.FC<HomePageProps> = ({ onReviewChange }) => {
     [cards, retryCardIds]
   );
 
-  const totalToday = todayStats.reviewedToday + dueCards.length;
+  const totalToday = dueStats.totalDue + todayStats.reviewedToday;
   const progress = totalToday > 0 ? (todayStats.reviewedToday / totalToday) * 100 : 0;
 
   const endReview = useCallback((ratings: Rating[]) => {
@@ -194,21 +195,28 @@ const HomePage: React.FC<HomePageProps> = ({ onReviewChange }) => {
       <section className="mb-12">
         <div className="bg-surface-card rounded-xl p-7 md:p-8">
           <div className="flex flex-col md:flex-row items-center gap-6">
-            <ProgressRing progress={dueCards.length === 0 ? 100 : progress} size={120} strokeWidth={7}>
+            <ProgressRing progress={dueStats.totalDue === 0 ? 100 : progress} size={120} strokeWidth={7}>
               <div className="text-center">
-                <div className="text-3xl font-medium heading-serif text-ink">{dueCards.length}</div>
+                <div className="text-3xl font-medium heading-serif text-ink">{dueStats.totalDue}</div>
                 <div className="text-xs text-muted mt-0.5">待复习</div>
+                <div className="text-[10px] text-muted-soft mt-0.5 leading-tight">
+                  {dueStats.reviewCount > 0 && `${dueStats.reviewCount}张复习`}
+                  {dueStats.reviewCount > 0 && dueStats.newCount > 0 && ' · '}
+                  {dueStats.newCount > 0 && `${dueStats.newCount}张新卡`}
+                </div>
               </div>
             </ProgressRing>
             <div className="flex-1 text-center md:text-left">
               <h2 className="heading-serif text-xl md:text-2xl text-ink mb-1.5">
-                {dueCards.length > 0 ? `今日有 ${dueCards.length} 张卡片待复习` : '今日任务已完成'}
+                {dueStats.totalDue > 0
+                  ? `今日有待复习 ${dueStats.reviewCount} 张 · 新卡 ${dueStats.newCount} 张`
+                  : '今日任务已完成'}
               </h2>
               <p className="text-sm text-muted mb-5">
-                {dueCards.length > 0 ? '坚持每日复习，让知识成为习惯' : '休息一下吧，明天继续'}
+                {dueStats.totalDue > 0 ? '坚持每日复习，让知识成为习惯' : '休息一下吧，明天继续'}
               </p>
               <div className="flex flex-wrap justify-center md:justify-start gap-3">
-                {dueCards.length > 0 && (
+                {dueStats.totalDue > 0 && (
                   <Button size="lg" onClick={() => { setIsReviewing(true); onReviewChange?.(true); }}>
                     <Play size={17} className="mr-1.5" /> 开始复习
                   </Button>

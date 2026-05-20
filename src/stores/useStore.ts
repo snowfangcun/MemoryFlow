@@ -34,6 +34,7 @@ interface AppStore {
 
   reviewCard: (cardId: string, rating: Rating) => void;
   getDueCards: () => Card[];
+  getDueStats: () => { reviewCount: number; newCount: number; totalDue: number };
 
   getBacklinks: (cardId: string) => CardLink[];
   getForwardLinks: (cardId: string) => CardLink[];
@@ -52,7 +53,7 @@ interface AppStore {
 }
 
 const defaultSettings: Settings = {
-  dailyGoal: 20, theme: 'light', lastStudyDate: '', streakDays: 0, totalStudyDays: 0, exp: 0, level: 1,
+  dailyGoal: 20, theme: 'light', lastStudyDate: '', streakDays: 0, totalStudyDays: 0, exp: 0, level: 1, todayNewCount: 0,
 };
 
 // ── 工具函数 ──
@@ -219,13 +220,36 @@ export const useStore = create<AppStore>()(
         else if (!settings.lastStudyDate) { newSettings.streakDays = 1; newSettings.totalStudyDays = 1; }
         else { newSettings.streakDays = 1; newSettings.totalStudyDays = settings.totalStudyDays + 1; }
         newSettings.lastStudyDate = todayStr;
+        // 新的一天 → 重置今日新卡计数
+        if (settings.lastStudyDate !== todayStr) {
+          newSettings.todayNewCount = 0;
+        }
+        // 新卡通过学习期 → 计入今日新卡
+        if (card.reviewCount === 0 && rating !== 'forgot') {
+          newSettings.todayNewCount = (settings.lastStudyDate === todayStr ? settings.todayNewCount : 0) + 1;
+        }
         const expGained = getExpGainedForReview(rating);
         newSettings.exp = settings.exp + expGained;
         const newLevel = getRankByExp(newSettings.exp).level;
         newSettings.level = newLevel;
         set(s => ({ cards: s.cards.map(c => c.id === cardId ? { ...c, interval, nextReview, easeFactor: newEF, reviewCount: newReviewCount, updatedAt: Date.now() } : c), reviewLogs: [...s.reviewLogs, reviewLog], settings: newSettings }));
       },
-      getDueCards: () => get().cards.filter(c => c.nextReview <= Date.now()),
+      getDueCards: () => {
+        const { cards, settings } = get();
+        const due = cards.filter(c => c.nextReview <= Date.now());
+        const reviewCards = due.filter(c => c.reviewCount > 0);
+        const newCards = due.filter(c => c.reviewCount === 0);
+        const newLimit = Math.max(0, settings.dailyGoal - (settings.todayNewCount || 0));
+        return [...reviewCards, ...newCards.slice(0, newLimit)].sort((a, b) => a.nextReview - b.nextReview);
+      },
+      getDueStats: () => {
+        const { cards, settings } = get();
+        const due = cards.filter(c => c.nextReview <= Date.now());
+        const reviewCards = due.filter(c => c.reviewCount > 0);
+        const newCards = due.filter(c => c.reviewCount === 0);
+        const newLimit = Math.max(0, settings.dailyGoal - (settings.todayNewCount || 0));
+        return { reviewCount: reviewCards.length, newCount: Math.min(newCards.length, newLimit), totalDue: reviewCards.length + Math.min(newCards.length, newLimit) };
+      },
 
       getTodayStats: () => {
         const { cards, reviewLogs } = get();

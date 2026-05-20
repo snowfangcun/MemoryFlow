@@ -20,7 +20,7 @@ export interface Card {
 export type Rating = 'forgot' | 'hard' | 'good';
 export interface CardLink { id: string; sourceId: string; targetId: string; targetName: string; }
 export interface ReviewLog { id: string; cardId: string; rating: Rating; reviewedAt: number; previousInterval: number; newInterval: number; }
-export interface Settings { dailyGoal: number; theme: 'light' | 'dark'; lastStudyDate: string; streakDays: number; totalStudyDays: number; exp: number; level: number; }
+export interface Settings { dailyGoal: number; theme: 'light' | 'dark'; lastStudyDate: string; streakDays: number; totalStudyDays: number; exp: number; level: number; todayNewCount: number; }
 
 export const MASTERED_INTERVAL_MS = 15 * 24 * 60 * 60 * 1000;
 
