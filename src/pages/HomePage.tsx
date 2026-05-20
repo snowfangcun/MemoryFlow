@@ -169,6 +169,26 @@ const HomePage: React.FC<HomePageProps> = ({ onReviewChange }) => {
     ...n, dueCount: cards.filter(c => c.notebookId === n.id && c.nextReview <= Date.now()).length
   })).filter(n => n.dueCount > 0).slice(0, 3);
 
+  // 没有学习本 → 只展示空状态引导
+  if (notebooks.length === 0) {
+    return (
+      <div className="max-w-5xl mx-auto px-5 py-10">
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <EmptyState icon="book" title="开始你的学习之旅"
+            description="创建一个学习本，然后添加卡片开始记忆"
+            action={{ label: '新建学习本', onClick: () => { setNewNbName(''); setNewNbDesc(''); setShowNewNotebookModal(true); } }} />
+        </div>
+        <Modal isOpen={showNewNotebookModal} onClose={() => setShowNewNotebookModal(false)} title="新建学习本"
+          footer={<><Button variant="ghost" onClick={() => setShowNewNotebookModal(false)}>取消</Button><Button onClick={handleCreateNotebook}>创建</Button></>}>
+          <div className="space-y-3.5">
+            <Input label="名称" placeholder="例如：英语单词" value={newNbName} onChange={e => setNewNbName(e.target.value)} />
+            <Textarea label="描述（可选）" placeholder="简短描述..." rows={2} value={newNbDesc} onChange={e => setNewNbDesc(e.target.value)} />
+          </div>
+        </Modal>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-5xl mx-auto px-5 py-10">
       <section className="mb-12">
@@ -235,13 +255,6 @@ const HomePage: React.FC<HomePageProps> = ({ onReviewChange }) => {
           </div>
         ))}
       </section>
-
-      {notebooks.length === 0 && (
-        <section className="mb-6">
-          <EmptyState icon="book" title="开始你的学习之旅" description="创建一个学习本，然后添加卡片开始记忆"
-            action={{ label: '新建学习本', onClick: () => { setNewNbName(''); setNewNbDesc(''); setShowNewNotebookModal(true); } }} />
-        </section>
-      )}
 
       {dueNotebooks.length > 0 && (
         <section>
