@@ -70,7 +70,12 @@ const calculateNextReview = (card: Card, rating: Rating, reviewedAt: number) => 
   let intervalMs: number;
   let newReviewCount: number;
 
-  if (q < 3) {
+  const isLearning = card.reviewCount === 0 && card.interval < MS.DAY;
+
+  if (isLearning) {
+    intervalMs = 10 * MS.MIN;
+    newReviewCount = q >= 3 ? 1 : 0;
+  } else if (q < 3) {
     newReviewCount = 0;
     intervalMs = MS.DAY;
   } else {
