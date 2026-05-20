@@ -1,7 +1,7 @@
-# MemoryFlow - 艾宾浩斯记忆学习软件
+# 温故 - 艾宾浩斯记忆学习软件
 
 <div align="center">
-  <img src="public/favicon.svg" alt="MemoryFlow Logo" width="64" height="64" />
+  <img src="public/favicon.svg" alt="温故 Logo" width="64" height="64" />
   <h3>基于艾宾浩斯遗忘曲线理论的学习工具</h3>
 </div>
 

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { nanoid } from 'nanoid';
 import type { Notebook, Folder, Card, CardLink, ReviewLog, Settings, Rating } from '../types';
+import { getExpGainedForReview, getRankByExp } from '../types';
 
 const STORAGE_KEY = 'memoryflow_store';
 
@@ -33,6 +34,7 @@ interface AppStore {
 
   reviewCard: (cardId: string, rating: Rating) => void;
   getDueCards: () => Card[];
+  getDueStats: () => { reviewCount: number; newCount: number; totalDue: number };
 
   getBacklinks: (cardId: string) => CardLink[];
   getForwardLinks: (cardId: string) => CardLink[];
@@ -47,10 +49,11 @@ interface AppStore {
 
   exportData: () => string;
   importData: (json: string) => string | null;
+  resetAllData: () => void;
 }
 
 const defaultSettings: Settings = {
-  dailyGoal: 20, theme: 'dark', lastStudyDate: '', streakDays: 0, totalStudyDays: 0,
+  dailyGoal: 20, theme: 'light', lastStudyDate: '', streakDays: 0, totalStudyDays: 0, exp: 0, level: 1, todayNewCount: 0,
 };
 
 // ── 工具函数 ──
@@ -58,25 +61,40 @@ const getDateString = (t: number): string => new Date(t).toISOString().split('T'
 const today = (): string => getDateString(Date.now());
 
 const MS = { MIN: 60_000, HOUR: 3_600_000, DAY: 86_400_000 };
-const REVIEW_INTERVALS_MS = [5 * MS.MIN, 30 * MS.MIN, 12 * MS.HOUR, 1 * MS.DAY, 2 * MS.DAY, 4 * MS.DAY, 7 * MS.DAY, 15 * MS.DAY];
 const ratingMap: Record<Rating, number> = { forgot: 1, hard: 3, good: 5 };
 
 const calculateNextReview = (card: Card, rating: Rating, reviewedAt: number) => {
   const q = ratingMap[rating];
   let newEF = card.easeFactor + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02));
   if (newEF < 1.3) newEF = 1.3;
+
   let intervalMs: number;
-  if (rating === 'forgot') {
-    intervalMs = REVIEW_INTERVALS_MS[0];
+  let newReviewCount: number;
+
+  const isLearning = card.reviewCount === 0 && card.interval < MS.DAY;
+
+  if (isLearning) {
+    intervalMs = 10 * MS.MIN;
+    newReviewCount = q >= 3 ? 1 : 0;
+  } else if (q < 3) {
+    newReviewCount = 0;
+    intervalMs = MS.DAY;
   } else {
-    let idx = Math.min(card.reviewCount, REVIEW_INTERVALS_MS.length - 1);
-    if (rating === 'good' && newEF > 3.0) idx = Math.min(idx + 1, REVIEW_INTERVALS_MS.length - 1);
-    else if (rating === 'hard' && newEF < 1.5) idx = Math.max(0, idx - 2);
-    else if (rating === 'hard') idx = Math.max(0, idx - 1);
-    intervalMs = REVIEW_INTERVALS_MS[idx];
+    newReviewCount = card.reviewCount + 1;
+    if (card.reviewCount === 0) {
+      intervalMs = MS.DAY;
+    } else if (card.reviewCount === 1) {
+      intervalMs = 6 * MS.DAY;
+    } else {
+      intervalMs = Math.round(card.interval * newEF);
+    }
   }
-  const nextReview = intervalMs < MS.DAY ? reviewedAt + intervalMs : (() => { const d = new Date(reviewedAt + intervalMs); d.setHours(0, 0, 0, 0); return d.getTime(); })();
-  return { interval: intervalMs, nextReview, newEF };
+
+  const nextReview = intervalMs < MS.DAY
+    ? reviewedAt + intervalMs
+    : (() => { const d = new Date(reviewedAt + intervalMs); d.setHours(0, 0, 0, 0); return d.getTime(); })();
+
+  return { interval: intervalMs, nextReview, newEF, reviewCount: newReviewCount };
 };
 
 /** 从文本中解析 [[链接]] 并生成/更新 CardLink */
@@ -192,7 +210,7 @@ export const useStore = create<AppStore>()(
         const card = cards.find(c => c.id === cardId);
         if (!card) return;
         const reviewedAt = Date.now();
-        const { interval, nextReview, newEF } = calculateNextReview(card, rating, reviewedAt);
+        const { interval, nextReview, newEF, reviewCount: newReviewCount } = calculateNextReview(card, rating, reviewedAt);
         const reviewLog: ReviewLog = { id: nanoid(), cardId, rating, reviewedAt, previousInterval: card.interval, newInterval: interval };
         let newSettings = { ...settings };
         const todayStr = today();
@@ -202,9 +220,36 @@ export const useStore = create<AppStore>()(
         else if (!settings.lastStudyDate) { newSettings.streakDays = 1; newSettings.totalStudyDays = 1; }
         else { newSettings.streakDays = 1; newSettings.totalStudyDays = settings.totalStudyDays + 1; }
         newSettings.lastStudyDate = todayStr;
-        set(s => ({ cards: s.cards.map(c => c.id === cardId ? { ...c, interval, nextReview, easeFactor: newEF, reviewCount: c.reviewCount + 1, updatedAt: Date.now() } : c), reviewLogs: [...s.reviewLogs, reviewLog], settings: newSettings }));
+        // 新的一天 → 重置今日新卡计数
+        if (settings.lastStudyDate !== todayStr) {
+          newSettings.todayNewCount = 0;
+        }
+        // 新卡通过学习期 → 计入今日新卡
+        if (card.reviewCount === 0 && rating !== 'forgot') {
+          newSettings.todayNewCount = (settings.lastStudyDate === todayStr ? settings.todayNewCount : 0) + 1;
+        }
+        const expGained = getExpGainedForReview(rating);
+        newSettings.exp = settings.exp + expGained;
+        const newLevel = getRankByExp(newSettings.exp).level;
+        newSettings.level = newLevel;
+        set(s => ({ cards: s.cards.map(c => c.id === cardId ? { ...c, interval, nextReview, easeFactor: newEF, reviewCount: newReviewCount, updatedAt: Date.now() } : c), reviewLogs: [...s.reviewLogs, reviewLog], settings: newSettings }));
       },
-      getDueCards: () => get().cards.filter(c => c.nextReview <= Date.now()),
+      getDueCards: () => {
+        const { cards, settings } = get();
+        const due = cards.filter(c => c.nextReview <= Date.now());
+        const reviewCards = due.filter(c => c.reviewCount > 0);
+        const newCards = due.filter(c => c.reviewCount === 0);
+        const newLimit = Math.max(0, settings.dailyGoal - (settings.todayNewCount || 0));
+        return [...reviewCards, ...newCards.slice(0, newLimit)].sort((a, b) => a.nextReview - b.nextReview);
+      },
+      getDueStats: () => {
+        const { cards, settings } = get();
+        const due = cards.filter(c => c.nextReview <= Date.now());
+        const reviewCards = due.filter(c => c.reviewCount > 0);
+        const newCards = due.filter(c => c.reviewCount === 0);
+        const newLimit = Math.max(0, settings.dailyGoal - (settings.todayNewCount || 0));
+        return { reviewCount: reviewCards.length, newCount: Math.min(newCards.length, newLimit), totalDue: reviewCards.length + Math.min(newCards.length, newLimit) };
+      },
 
       getTodayStats: () => {
         const { cards, reviewLogs } = get();
@@ -238,6 +283,14 @@ export const useStore = create<AppStore>()(
           set({ notebooks: data.notebooks, folders: data.folders || [], cards: data.cards, cardLinks: data.cardLinks || [], reviewLogs: data.reviewLogs, settings: data.settings });
           return null;
         } catch { return 'JSON 解析失败'; }
+      },
+
+      resetAllData: () => {
+        set({
+          notebooks: [], folders: [], cards: [], cardLinks: [], reviewLogs: [],
+          settings: { ...defaultSettings, lastStudyDate: today(), streakDays: 1, totalStudyDays: 1 },
+        });
+        try { localStorage.removeItem(STORAGE_KEY); } catch {}
       },
     }),
     { name: STORAGE_KEY }

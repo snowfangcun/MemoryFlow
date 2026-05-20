@@ -204,9 +204,65 @@ const NotebooksPage: React.FC = () => {
   // 预览卡片
   const [previewCard, setPreviewCard] = useState<Card | null>(null);
 
+  // 移动端层叠导航
+  const [navStack, setNavStack] = useState<string[]>([]);
+  const [viewingUncategorized, setViewingUncategorized] = useState(false);
+
   const allTags = useMemo(() => getAllTags(), [cards, getAllTags]);
   const notebookFolders = useMemo(() => selectedNotebook ? folders.filter(f => f.notebookId === selectedNotebook.id) : [], [folders, selectedNotebook]);
   const rootFolders = useMemo(() => notebookFolders.filter(f => !f.parentFolderId), [notebookFolders]);
+
+  // 移动端导航的当前层级
+  const currentFolderId = navStack.length > 0 ? navStack[navStack.length - 1] : null;
+
+  const currentSubfolders = useMemo(() => {
+    if (!selectedNotebook) return [];
+    return currentFolderId
+      ? notebookFolders.filter(f => f.parentFolderId === currentFolderId)
+      : rootFolders;
+  }, [notebookFolders, selectedNotebook, currentFolderId, rootFolders]);
+
+  const currentLevelCards = useMemo(() => {
+    if (!selectedNotebook) return [];
+    let result: Card[];
+    if (viewingUncategorized) {
+      result = cards.filter(c => c.notebookId === selectedNotebook.id && !c.folderId);
+    } else {
+      result = cards.filter(c => c.notebookId === selectedNotebook.id && c.folderId === currentFolderId);
+    }
+    if (searchQuery) result = result.filter(c => c.front.toLowerCase().includes(searchQuery.toLowerCase()) || c.back.toLowerCase().includes(searchQuery.toLowerCase()));
+    if (filterTag) result = result.filter(c => c.tags?.includes(filterTag));
+    result.sort((a, b) => sortBy === 'reviews' ? b.reviewCount - a.reviewCount : sortBy === 'name' ? a.front.localeCompare(b.front) : b.createdAt - a.createdAt);
+    return result;
+  }, [cards, selectedNotebook, currentFolderId, viewingUncategorized, searchQuery, filterTag, sortBy]);
+
+  const mobileBreadcrumb = useMemo(() => {
+    const crumbs: { id: string | null; label: string }[] = [{ id: null, label: selectedNotebook?.name || '' }];
+    for (const id of navStack) {
+      const f = notebookFolders.find(f => f.id === id);
+      if (f) crumbs.push({ id, label: f.name });
+    }
+    if (viewingUncategorized) crumbs.push({ id: null, label: '未分类卡片' });
+    return crumbs;
+  }, [navStack, notebookFolders, selectedNotebook, viewingUncategorized]);
+
+  const navigateIntoFolder = (folderId: string) => {
+    setNavStack(prev => [...prev, folderId]);
+    setViewingUncategorized(false);
+  };
+
+  const navigateBack = () => {
+    if (viewingUncategorized) {
+      setViewingUncategorized(false);
+    } else if (navStack.length > 0) {
+      setNavStack(prev => prev.slice(0, -1));
+    }
+  };
+
+  const navigateToRoot = () => {
+    setNavStack([]);
+    setViewingUncategorized(false);
+  };
 
   // 获取子文件夹
   const getChildFolders = (parentId: string) => notebookFolders.filter(f => f.parentFolderId === parentId);
@@ -593,8 +649,8 @@ const NotebooksPage: React.FC = () => {
             </div>
           </div>
 
-          {/* ═══ 卡片树：目录 + 卡片 ═══ */}
-          <div className="space-y-0.5">
+          {/* ═══ 桌面：树形视图 ═══ */}
+          <div className="hidden md:block space-y-0.5">
             {/* 根目录：未分类卡片（可展开） */}
             <div className="group flex items-center gap-2 px-3 py-2.5 rounded-xl transition-colors hover:bg-surface-card">
               {uncategorizedCards.length > 0 ? (
@@ -645,6 +701,139 @@ const NotebooksPage: React.FC = () => {
             >
               <Plus size={14} /> 新建文件夹
             </button>
+          </div>
+
+          {/* ═══ 移动端：层叠导航 ═══ */}
+          <div className="md:hidden">
+            {/* 面包屑导航 */}
+            {mobileBreadcrumb.length > 1 && (
+              <div className="flex items-center gap-1 mb-4 overflow-x-auto">
+                <button onClick={navigateBack} className="shrink-0 p-1 rounded-lg hover:bg-surface-soft transition-colors">
+                  <ArrowLeft size={16} className="text-muted" />
+                </button>
+                <div className="flex items-center gap-1 text-xs text-muted truncate">
+                  {mobileBreadcrumb.map((crumb, i) => (
+                    <React.Fragment key={i}>
+                      {i > 0 && <ChevronRight size={12} className="shrink-0 text-muted-soft" />}
+                      <button
+                        onClick={navigateToRoot}
+                        className="shrink-0 whitespace-nowrap hover:text-ink transition-colors"
+                      >
+                        {crumb.label}
+                      </button>
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 层级内容 */}
+            <div className="space-y-1">
+              {/* 根层级：未分类卡片入口 */}
+              {navStack.length === 0 && !viewingUncategorized && (
+                <button
+                  onClick={() => setViewingUncategorized(true)}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors hover:bg-surface-card"
+                >
+                  <FolderOpen size={18} className="text-muted shrink-0" />
+                  <div className="flex-1 min-w-0 text-left">
+                    <div className="text-sm font-medium text-ink">未分类卡片</div>
+                    <div className="text-xs text-muted">{uncategorizedCards.length} 张卡片</div>
+                  </div>
+                  <ChevronRight size={16} className="text-muted-soft shrink-0" />
+                </button>
+              )}
+
+              {/* 子文件夹列表 */}
+              {currentSubfolders.map(folder => {
+                const cardCount = getFolderCardCount(folder.id);
+                const dueCount = getFolderDueCount(folder.id);
+                return (
+                  <button
+                    key={folder.id}
+                    onClick={() => navigateIntoFolder(folder.id)}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors hover:bg-surface-card"
+                  >
+                    <FolderIcon size={18} className="text-muted shrink-0" />
+                    <div className="flex-1 min-w-0 text-left">
+                      <div className="text-sm font-medium text-ink truncate">{folder.name}</div>
+                      <div className="text-xs text-muted">{cardCount} 张卡片</div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {dueCount > 0 && (
+                        <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-primary/15 text-primary">
+                          {dueCount} 待复习
+                        </span>
+                      )}
+                      <ChevronRight size={16} className="text-muted-soft" />
+                    </div>
+                  </button>
+                );
+              })}
+
+              {/* 卡片列表 */}
+              {currentLevelCards.length > 0 && (
+                <div className="pt-1">
+                  {currentLevelCards.map(card => {
+                    const isDue = card.nextReview <= Date.now();
+                    const frontText = (card.type === 'cloze'
+                      ? card.front.replace(/\{\{([^}]+)\}\}/g, '____')
+                      : card.front.replace(/\[\[([^\]]+)\]\]/g, '$1')
+                    );
+                    return (
+                      <button
+                        key={card.id}
+                        onClick={() => setPreviewCard(card)}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors hover:bg-surface-card"
+                      >
+                        <span className="shrink-0 w-5 flex justify-center">
+                          {card.type === 'cloze' ? (
+                            <PenLine size={14} className="text-muted" />
+                          ) : (
+                            <HelpCircle size={14} className="text-muted" />
+                          )}
+                        </span>
+                        <span className="flex-1 min-w-0 text-sm text-body truncate text-left">{frontText}</span>
+                        {isDue && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* 空状态 */}
+              {currentSubfolders.length === 0 && currentLevelCards.length === 0 && (
+                <div className="py-4">
+                  <EmptyState icon="folder" title="这里还没有内容" description="新建文件夹对卡片分类，或直接添加卡片" />
+                </div>
+              )}
+
+              {/* 操作按钮 */}
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => { setFolderParentId(currentFolderId); setFolderName(''); setShowFolderModal(true); }}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-medium bg-surface-soft text-muted hover:text-ink hover:bg-surface-card transition-colors"
+                >
+                  <FolderPlus size={15} /> 新建文件夹
+                </button>
+                <button
+                  onClick={() => {
+                    setEditingCard(null);
+                    setCardType('question');
+                    setFormFront('');
+                    setFormBack('');
+                    setFormTags([]);
+                    setFormFolderId(currentFolderId || undefined);
+                    setShowCardModal(true);
+                  }}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-medium bg-surface-soft text-muted hover:text-ink hover:bg-surface-card transition-colors"
+                >
+                  <Plus size={15} /> 新建卡片
+                </button>
+              </div>
+            </div>
           </div>
         </>
       )}

@@ -1,16 +1,18 @@
 import React, { useRef, useState } from 'react';
-import { Download, Upload, Target, RotateCcw } from 'lucide-react';
+import { Download, Upload, Target, RotateCcw, Trash2, Sun, Moon } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { ConfirmModal } from '../components/ui/Modal';
 import { useStore } from '../stores/useStore';
 import { useToastStore } from '../stores/useToastStore';
 
 const SettingsPage: React.FC = () => {
-  const { settings, updateSettings, exportData, importData, reviewLogs } = useStore();
+  const { settings, updateSettings, exportData, importData, reviewLogs, resetAllData } = useStore();
   const addToast = useToastStore(s => s.addToast);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   const [dailyGoal, setDailyGoal] = useState(String(settings.dailyGoal));
+  const [showResetModal, setShowResetModal] = useState(false);
 
   const handleSaveGoal = () => {
     const val = parseInt(dailyGoal, 10);
@@ -53,6 +55,13 @@ const SettingsPage: React.FC = () => {
     e.target.value = '';
   };
 
+  const handleReset = () => {
+    resetAllData();
+    addToast('数据已重置', 'info');
+    setShowResetModal(false);
+    setTimeout(() => window.location.reload(), 800);
+  };
+
   return (
     <div className="max-w-2xl mx-auto px-5 py-10">
       <h2 className="heading-serif text-xl text-ink mb-7">设置</h2>
@@ -69,6 +78,38 @@ const SettingsPage: React.FC = () => {
               onChange={e => setDailyGoal(e.target.value)} placeholder="20" />
           </div>
           <Button onClick={handleSaveGoal}>保存</Button>
+        </div>
+      </section>
+
+      {/* 主题切换 */}
+      <section className="bg-surface-card rounded-xl p-5 mb-4">
+        <h3 className="text-sm font-semibold text-ink mb-1 flex items-center gap-2">
+          {settings.theme === 'dark' ? <Moon size={16} className="text-primary" /> : <Sun size={16} className="text-primary" />} 界面主题
+        </h3>
+        <p className="text-xs text-muted mb-4">选择你偏好的显示模式</p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => updateSettings({ theme: 'light' })}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+              settings.theme === 'light'
+                ? 'border-primary bg-primary/10 text-ink'
+                : 'border-hairline text-muted hover:text-ink hover:bg-surface-soft'
+            }`}
+          >
+            <Sun size={16} /> 亮色
+          </button>
+          <button
+            type="button"
+            onClick={() => updateSettings({ theme: 'dark' })}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+              settings.theme === 'dark'
+                ? 'border-primary bg-primary/10 text-ink'
+                : 'border-hairline text-muted hover:text-ink hover:bg-surface-soft'
+            }`}
+          >
+            <Moon size={16} /> 暗色
+          </button>
         </div>
       </section>
 
@@ -94,16 +135,39 @@ const SettingsPage: React.FC = () => {
         </p>
       </section>
 
+      {/* 重置数据 */}
+      <section className="bg-surface-card rounded-xl p-5 mb-4 border border-danger/20">
+        <h3 className="text-sm font-semibold text-ink mb-1 flex items-center gap-2">
+          <Trash2 size={16} className="text-danger" /> 重置数据
+        </h3>
+        <p className="text-xs text-muted mb-4">
+          清除所有学习本、卡片和复习记录。此操作不可撤销，请先导出备份。
+        </p>
+        <Button variant="danger" onClick={() => setShowResetModal(true)}>
+          <Trash2 size={15} className="mr-1.5" /> 清除所有数据
+        </Button>
+      </section>
+
       {/* 关于 */}
       <section className="bg-surface-card rounded-xl p-5">
         <h3 className="text-sm font-semibold text-ink mb-1 flex items-center gap-2">
           <RotateCcw size={16} className="text-primary" /> 关于
         </h3>
         <p className="text-xs text-muted">
-          MemoryFlow v1.0 — 基于 "351-351" 艾宾浩斯间隔法的学习工具。
+          温故 v1.0 — 基于 "351-351" 艾宾浩斯间隔法的学习工具。
           数据存储在浏览器本地 (localStorage)，清除浏览器缓存前请先导出备份。
         </p>
       </section>
+
+      <ConfirmModal
+        isOpen={showResetModal}
+        onClose={() => setShowResetModal(false)}
+        onConfirm={handleReset}
+        title="确认重置数据"
+        message="此操作将清除所有学习本、卡片、复习记录和等级数据。此操作不可撤销，确定要继续吗？"
+        confirmText="确认重置"
+        cancelText="取消"
+      />
     </div>
   );
 };

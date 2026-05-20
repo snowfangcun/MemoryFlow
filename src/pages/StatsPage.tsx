@@ -1,11 +1,12 @@
 import React, { useMemo } from 'react';
-import { Flame, Trophy, Target, TrendingUp, Clock, CheckCircle } from 'lucide-react';
+import { Flame, Trophy, Target, TrendingUp, Clock, CheckCircle, GraduationCap, ChevronRight, BookOpen } from 'lucide-react';
 import HeatmapCalendar from '../components/ui/HeatmapCalendar';
 import { useStore } from '../stores/useStore';
-import { MASTERED_INTERVAL_MS } from '../types';
+import { MASTERED_INTERVAL_MS, getRankByLevel, getNextRank, getExpProgress } from '../types';
 
 const StatsPage: React.FC = () => {
   const { notebooks, cards, reviewLogs, settings, getStreak, getHeatmapData } = useStore();
+  const rank = getRankByLevel(settings.level);
 
   const stats = useMemo(() => ({
     streak: getStreak(),
@@ -45,6 +46,39 @@ const StatsPage: React.FC = () => {
       </div>
 
       <section className="bg-surface-card rounded-xl p-5 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold text-ink">科举品阶</h3>
+          <span className="text-xs text-muted">Lv.{settings.level}</span>
+        </div>
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 rounded-lg bg-surface-soft flex items-center justify-center">
+            <GraduationCap size={20} className="text-primary" />
+          </div>
+          <div className="flex-1">
+            <div className="text-base font-medium heading-serif text-ink">{rank.title}</div>
+            {(() => {
+              const next = getNextRank(settings.level);
+              if (next) {
+                const prog = getExpProgress(settings.exp, settings.level);
+                return (
+                  <div className="mt-1">
+                    <div className="flex items-center justify-between text-xs text-muted mb-1">
+                      <span>下一阶：{next.title}</span>
+                      <span>{prog.currentExp} / {prog.requiredExp}</span>
+                    </div>
+                    <div className="h-1.5 bg-hairline rounded-full overflow-hidden">
+                      <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${prog.progressPercent}%` }} />
+                    </div>
+                  </div>
+                );
+              }
+              return <p className="text-xs text-primary mt-1">已达最高品阶</p>;
+            })()}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-surface-card rounded-xl p-5 mb-6">
         <h3 className="text-sm font-semibold text-ink mb-4">学习热力图</h3>
         <HeatmapCalendar data={stats.heatmap} daysToShow={84} />
       </section>
@@ -70,7 +104,13 @@ const StatsPage: React.FC = () => {
       <section className="bg-surface-card rounded-xl p-5">
         <h3 className="text-sm font-semibold text-ink mb-4">学习本详情</h3>
         {stats.notebookStats.length === 0 ? (
-          <p className="text-sm text-muted text-center py-6">还没有学习本</p>
+          <div className="flex flex-col items-center py-10 text-center">
+            <div className="w-12 h-12 rounded-xl bg-surface-soft flex items-center justify-center mb-3">
+              <BookOpen size={22} strokeWidth={1.5} className="text-muted" />
+            </div>
+            <p className="text-sm text-muted">还没有学习本</p>
+            <p className="text-xs text-muted-soft mt-1">创建学习本后，这里会展示每个学习本的学习进度</p>
+          </div>
         ) : (
           <div className="space-y-3">
             {stats.notebookStats.map(nb => {

@@ -1,9 +1,9 @@
 {
-  "name": "memoryflow",
+  "name": "wengu",
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "MemoryFlow - 基于艾宾浩斯记忆法的学习工具",
+  "description": "温故 - 基于艾宾浩斯记忆法的学习工具",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
@@ -11,6 +11,8 @@
   },
   "devDependencies": {
     "@types/node": "^25.9.0",
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
     "typescript": "~6.0.2",
     "vite": "^8.0.12"
   },
@@ -28,6 +30,8 @@
     "react-dom": "^19.2.6",
     "react-router-dom": "^7.15.1",
     "tailwindcss": "^4.3.0",
+    "vis-data": "^8.0.4",
+    "vis-network": "^10.1.0",
     "zustand": "^5.0.13"
   }
 }

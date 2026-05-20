@@ -1,9 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, RotateCcw, Zap, Trophy, Flame, Clock, ArrowRight } from 'lucide-react';
+import { Sparkles, RotateCcw, Zap, Trophy, Flame, ArrowRight, GraduationCap, Star } from 'lucide-react';
 import Button from './Button';
 import { ProgressRing } from './index';
 import type { Rating } from '../../types';
+import { getTotalExpForRatings, getRankByExp, getRankByLevel } from '../../types';
 import { useStore } from '../../stores/useStore';
 
 interface ReviewCompletionProps {
@@ -18,6 +19,10 @@ const ReviewCompletion: React.FC<ReviewCompletionProps> = ({ reviewedCount, rati
 
   const correctCount = ratings.filter(r => r !== 'forgot').length;
   const accuracy = reviewedCount > 0 ? Math.round((correctCount / reviewedCount) * 100) : 0;
+  const expGained = getTotalExpForRatings(ratings);
+  const oldLevel = getRankByExp(settings.exp - expGained).level;
+  const leveledUp = oldLevel < settings.level;
+  const newRank = getRankByLevel(settings.level);
 
   return (
     <div className="min-h-screen bg-canvas flex items-center justify-center p-5">
@@ -45,10 +50,22 @@ const ReviewCompletion: React.FC<ReviewCompletionProps> = ({ reviewedCount, rati
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.25 }}
-          className="text-sm text-muted mb-8"
-        >
-          坚持就是胜利，继续保持
-        </motion.p>
+          className="text-sm text-muted mb-6"
+          >
+            坚持就是胜利，继续保持
+          </motion.p>
+        {leveledUp && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-6"
+          >
+            <Star size={14} className="text-primary" />
+            <span className="text-sm font-medium text-primary">晋阶 {newRank.title}！</span>
+            <Star size={14} className="text-primary" />
+          </motion.div>
+        )}
 
         {/* Stats Cards */}
         <motion.div
@@ -71,9 +88,9 @@ const ReviewCompletion: React.FC<ReviewCompletionProps> = ({ reviewedCount, rati
             <div className="text-xs text-muted mt-1">正确率</div>
           </div>
           <div className="bg-surface-card rounded-xl p-4">
-            <Clock size={20} className="mx-auto mb-1 text-primary" />
-            <div className="text-lg font-semibold font-mono text-ink">{settings.totalStudyDays}</div>
-            <div className="text-xs text-muted">累计学习</div>
+            <GraduationCap size={20} className="mx-auto mb-1 text-primary" />
+            <div className="text-lg font-semibold font-mono text-ink">+{expGained}</div>
+            <div className="text-xs text-muted">获得 EXP</div>
           </div>
           <div className="bg-surface-card rounded-xl p-4">
             <Sparkles size={20} className="mx-auto mb-1 text-primary" />
