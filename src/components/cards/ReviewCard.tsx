@@ -92,7 +92,6 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ card, onRate, onExit, currentIn
         message={`已复习 ${currentIndex} 张卡片，进度将保留。确定退出吗？`}
         confirmText="退出"
         cancelText="继续复习"
-        variant="warning"
       />
 
       <div className="flex items-center justify-between px-5 py-3 border-b border-hairline">

@@ -87,15 +87,15 @@ interface ConfirmModalProps {
   message: string;
   confirmText?: string;
   cancelText?: string;
-  variant?: 'danger' | 'warning';
+  danger?: boolean;
 }
 
 export const ConfirmModal: React.FC<ConfirmModalProps> = ({
-  isOpen, onClose, onConfirm, title, message, confirmText = '确认', cancelText = '取消', variant = 'danger',
+  isOpen, onClose, onConfirm, title, message, confirmText = '确认', cancelText = '取消', danger = true,
 }) => (
   <Modal isOpen={isOpen} onClose={onClose} title={title}
     footer={<><Button variant="ghost" onClick={onClose}>{cancelText}</Button>
-      <Button variant={variant === 'danger' ? 'danger' : 'primary'} onClick={() => { onConfirm(); onClose(); }}>{confirmText}</Button></>}>
+      <Button variant={danger ? 'danger' : 'primary'} onClick={() => { onConfirm(); onClose(); }}>{confirmText}</Button></>}>
     <p className="text-sm text-body">{message}</p>
   </Modal>
 );

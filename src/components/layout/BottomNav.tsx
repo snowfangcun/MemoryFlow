@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useLayoutEffect } from 'react';
 import { motion } from 'framer-motion';
 import { TABS } from '../../constants/tabs';
 import type { TabId } from '../../constants/tabs';
@@ -13,7 +13,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange, dueCount 
   const containerRef = useRef<HTMLDivElement>(null);
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!containerRef.current) return;
     const activeIdx = TABS.findIndex(t => t.id === activeTab);
     const buttons = containerRef.current.querySelectorAll<HTMLButtonElement>('button');

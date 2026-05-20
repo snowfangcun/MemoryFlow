@@ -37,10 +37,9 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, dueCount }) => 
               return (
                 <button key={tab.id} onClick={() => onTabChange(tab.id)}
                   className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150
-                    ${isActive ? 'bg-canvas text-ink shadow-sm' : 'text-muted hover:text-ink'}
-                    ${tab.id === 'settings' ? 'px-2' : ''}`}>
+                    ${isActive ? 'bg-canvas text-ink shadow-sm' : 'text-muted hover:text-ink'}`}>
                   <Icon size={16} />
-                  <span className={tab.id === 'settings' ? 'hidden sm:inline' : 'hidden sm:inline'}>{tab.label}</span>
+                  <span className="hidden sm:inline">{tab.label}</span>
                   {tab.id === 'home' && dueCount > 0 && (
                     <span className="w-4 h-4 bg-danger text-white text-[10px] font-bold rounded-full flex items-center justify-center absolute -top-0.5 -right-0.5">
                       {dueCount > 9 ? '9+' : dueCount}
