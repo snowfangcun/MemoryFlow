@@ -1,24 +1,19 @@
 import React from 'react';
-import { BookMarked, BarChart3, Brain, Sparkles, Settings, GraduationCap, GitBranch } from 'lucide-react';
+import { Sparkles, GraduationCap } from 'lucide-react';
 import { useStore } from '../../stores/useStore';
 import { getRankByLevel } from '../../types';
+import { TABS } from '../../constants/tabs';
+import type { TabId } from '../../constants/tabs';
 
 interface HeaderProps {
-  activeTab: string;
-  onTabChange: (tab: string) => void;
+  activeTab: TabId;
+  onTabChange: (tab: TabId) => void;
   dueCount: number;
 }
 
 const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, dueCount }) => {
   const { settings } = useStore();
   const rank = getRankByLevel(settings.level);
-  const tabs = [
-    { id: 'home', label: '首页', icon: Brain },
-    { id: 'notebooks', label: '学习本', icon: BookMarked },
-    { id: 'graph', label: '图谱', icon: GitBranch },
-    { id: 'stats', label: '统计', icon: BarChart3 },
-    { id: 'settings', label: '设置', icon: Settings },
-  ];
 
   return (
     <header className="sticky top-0 z-40 bg-canvas/85 backdrop-blur-lg border-b border-hairline">
@@ -36,7 +31,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, dueCount }) => 
           </div>
 
           <nav className="hidden md:flex items-center gap-1 bg-surface-soft rounded-xl p-0.5">
-            {tabs.map((tab) => {
+            {TABS.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               return (

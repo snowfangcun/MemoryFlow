@@ -8,7 +8,11 @@ import type { Card } from '../types';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 
-const KnowledgeGraphPage: React.FC = () => {
+interface KnowledgeGraphPageProps {
+  onNavigateToNotebooks?: () => void;
+}
+
+const KnowledgeGraphPage: React.FC<KnowledgeGraphPageProps> = ({ onNavigateToNotebooks }) => {
   const { cards, cardLinks, notebooks, getBacklinks, getForwardLinks } = useStore();
   const [selectedNotebookId, setSelectedNotebookId] = useState<string | null>(null);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
@@ -176,7 +180,7 @@ const KnowledgeGraphPage: React.FC = () => {
           {cards.length === 0 ? (
             <div className="h-full rounded-xl border border-hairline overflow-hidden bg-surface-soft/30 flex items-center justify-center">
               <EmptyState icon="graph" title="还没有卡片" description="创建学习本和卡片后，知识图谱会自动构建卡片之间的关联网络"
-                action={{ label: '去创建卡片', onClick: () => window.location.hash = '#notebooks' }} />
+                action={{ label: '去创建卡片', onClick: () => onNavigateToNotebooks?.() }} />
             </div>
           ) : filteredCards.length === 0 ? (
             <div className="h-full rounded-xl border border-hairline overflow-hidden bg-surface-soft/30 flex items-center justify-center">

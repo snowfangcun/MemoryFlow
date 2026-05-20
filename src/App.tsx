@@ -4,11 +4,9 @@ import { Header, BottomNav } from './components/layout';
 import { HomePage, NotebooksPage, StatsPage, SettingsPage, KnowledgeGraphPage } from './pages';
 import ToastContainer from './components/ui/ToastContainer';
 import { useStore } from './stores/useStore';
+import { TAB_ORDER } from './constants/tabs';
+import type { TabId } from './constants/tabs';
 import './styles/globals.css';
-
-type Tab = 'home' | 'notebooks' | 'graph' | 'stats' | 'settings';
-
-const tabOrder: Tab[] = ['home', 'notebooks', 'graph', 'stats', 'settings'];
 
 const pageVariants = {
   enter: (direction: number) => ({
@@ -27,7 +25,7 @@ const pageVariants = {
 };
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<Tab>('home');
+  const [activeTab, setActiveTab] = useState<TabId>('home');
   const [direction, setDirection] = useState(0);
   const [isReviewActive, setIsReviewActive] = useState(false);
   const { getDueCards, initializeSettings, settings } = useStore();
@@ -44,8 +42,8 @@ const App: React.FC = () => {
 
   const dueCount = getDueCards().length;
 
-  const handleTabChange = useCallback((tab: Tab) => {
-    const dir = tabOrder.indexOf(tab) - tabOrder.indexOf(activeTab);
+  const handleTabChange = useCallback((tab: TabId) => {
+    const dir = TAB_ORDER.indexOf(tab) - TAB_ORDER.indexOf(activeTab);
     setDirection(dir);
     setActiveTab(tab);
   }, [activeTab]);
@@ -54,7 +52,7 @@ const App: React.FC = () => {
     switch (activeTab) {
       case 'home': return <HomePage onReviewChange={setIsReviewActive} />;
       case 'notebooks': return <NotebooksPage />;
-      case 'graph': return <KnowledgeGraphPage />;
+      case 'graph': return <KnowledgeGraphPage onNavigateToNotebooks={() => handleTabChange('notebooks')} />;
       case 'stats': return <StatsPage />;
       case 'settings': return <SettingsPage />;
       default: return <HomePage onReviewChange={setIsReviewActive} />;
@@ -64,7 +62,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-canvas overflow-x-hidden relative">
       {!isReviewActive && (
-        <Header activeTab={activeTab} onTabChange={(tab) => handleTabChange(tab as Tab)} dueCount={dueCount} />
+        <Header activeTab={activeTab} onTabChange={handleTabChange} dueCount={dueCount} />
       )}
       <main className={isReviewActive ? '' : 'pb-16 md:pb-8'}>
         <AnimatePresence mode="popLayout" custom={direction}>
@@ -81,7 +79,7 @@ const App: React.FC = () => {
         </AnimatePresence>
       </main>
       {!isReviewActive && (
-        <BottomNav activeTab={activeTab} onTabChange={(tab) => handleTabChange(tab as Tab)} dueCount={dueCount} />
+        <BottomNav activeTab={activeTab} onTabChange={handleTabChange} dueCount={dueCount} />
       )}
       <ToastContainer />
     </div>
