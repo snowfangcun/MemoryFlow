@@ -60,25 +60,35 @@ const getDateString = (t: number): string => new Date(t).toISOString().split('T'
 const today = (): string => getDateString(Date.now());
 
 const MS = { MIN: 60_000, HOUR: 3_600_000, DAY: 86_400_000 };
-const REVIEW_INTERVALS_MS = [5 * MS.MIN, 30 * MS.MIN, 12 * MS.HOUR, 1 * MS.DAY, 2 * MS.DAY, 4 * MS.DAY, 7 * MS.DAY, 15 * MS.DAY];
 const ratingMap: Record<Rating, number> = { forgot: 1, hard: 3, good: 5 };
 
 const calculateNextReview = (card: Card, rating: Rating, reviewedAt: number) => {
   const q = ratingMap[rating];
   let newEF = card.easeFactor + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02));
   if (newEF < 1.3) newEF = 1.3;
-  if (newEF > 3.0) newEF = 3.0;
+
   let intervalMs: number;
-  if (rating === 'forgot') {
-    intervalMs = REVIEW_INTERVALS_MS[0];
+  let newReviewCount: number;
+
+  if (q < 3) {
+    newReviewCount = 0;
+    intervalMs = MS.DAY;
   } else {
-    let idx = Math.min(card.reviewCount, REVIEW_INTERVALS_MS.length - 1);
-    idx += Math.round((newEF - 2.5) * 2);
-    idx = Math.max(0, Math.min(idx, REVIEW_INTERVALS_MS.length - 1));
-    intervalMs = REVIEW_INTERVALS_MS[idx];
+    newReviewCount = card.reviewCount + 1;
+    if (card.reviewCount === 0) {
+      intervalMs = MS.DAY;
+    } else if (card.reviewCount === 1) {
+      intervalMs = 6 * MS.DAY;
+    } else {
+      intervalMs = Math.round(card.interval * newEF);
+    }
   }
-  const nextReview = intervalMs < MS.DAY ? reviewedAt + intervalMs : (() => { const d = new Date(reviewedAt + intervalMs); d.setHours(0, 0, 0, 0); return d.getTime(); })();
-  return { interval: intervalMs, nextReview, newEF };
+
+  const nextReview = intervalMs < MS.DAY
+    ? reviewedAt + intervalMs
+    : (() => { const d = new Date(reviewedAt + intervalMs); d.setHours(0, 0, 0, 0); return d.getTime(); })();
+
+  return { interval: intervalMs, nextReview, newEF, reviewCount: newReviewCount };
 };
 
 /** 从文本中解析 [[链接]] 并生成/更新 CardLink */
@@ -194,9 +204,8 @@ export const useStore = create<AppStore>()(
         const card = cards.find(c => c.id === cardId);
         if (!card) return;
         const reviewedAt = Date.now();
-        const { interval, nextReview, newEF } = calculateNextReview(card, rating, reviewedAt);
+        const { interval, nextReview, newEF, reviewCount: newReviewCount } = calculateNextReview(card, rating, reviewedAt);
         const reviewLog: ReviewLog = { id: nanoid(), cardId, rating, reviewedAt, previousInterval: card.interval, newInterval: interval };
-        const resetCount = rating === 'forgot' ? 0 : card.reviewCount + 1;
         let newSettings = { ...settings };
         const todayStr = today();
         const yesterday = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return getDateString(d.getTime()); })();
@@ -209,7 +218,7 @@ export const useStore = create<AppStore>()(
         newSettings.exp = settings.exp + expGained;
         const newLevel = getRankByExp(newSettings.exp).level;
         newSettings.level = newLevel;
-        set(s => ({ cards: s.cards.map(c => c.id === cardId ? { ...c, interval, nextReview, easeFactor: newEF, reviewCount: resetCount, updatedAt: Date.now() } : c), reviewLogs: [...s.reviewLogs, reviewLog], settings: newSettings }));
+        set(s => ({ cards: s.cards.map(c => c.id === cardId ? { ...c, interval, nextReview, easeFactor: newEF, reviewCount: newReviewCount, updatedAt: Date.now() } : c), reviewLogs: [...s.reviewLogs, reviewLog], settings: newSettings }));
       },
       getDueCards: () => get().cards.filter(c => c.nextReview <= Date.now()),
 
